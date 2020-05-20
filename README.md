@@ -1,2 +1,2 @@
 # jwt-bouncer
-Claims-based access control sidecar app
+Sidecar reverse proxy for claims-based access control (CBAC)
