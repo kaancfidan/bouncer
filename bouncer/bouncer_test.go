@@ -16,11 +16,11 @@ func TestBouncer_Proxy(t *testing.T) {
 		PathConfigs   []bouncer.PathConfig
 	}
 	tests := []struct {
-		name                 string
-		fields               fields
-		request              *http.Request
-		wantHttpServerCalled bool
-		wantStatusCode       int
+		name               string
+		fields             fields
+		request            *http.Request
+		wantUpstreamCalled bool
+		wantStatusCode     int
 	}{
 		{
 			name: "allow anonymous",
@@ -37,8 +37,8 @@ func TestBouncer_Proxy(t *testing.T) {
 				Method:     "GET",
 				RequestURI: "/test/",
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "no bearer token - default",
@@ -50,8 +50,8 @@ func TestBouncer_Proxy(t *testing.T) {
 				Method:     "GET",
 				RequestURI: "/test/",
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusUnauthorized,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
 			name: "no bearer token - configured path",
@@ -75,8 +75,8 @@ func TestBouncer_Proxy(t *testing.T) {
 				Method:     "GET",
 				RequestURI: "/test/",
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusUnauthorized,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
 			name: "invalid authorization header",
@@ -91,8 +91,8 @@ func TestBouncer_Proxy(t *testing.T) {
 					"Authorization": {"invalid header"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusUnauthorized,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
 			name: "invalid token",
@@ -107,8 +107,8 @@ func TestBouncer_Proxy(t *testing.T) {
 					"Authorization": {"Bearer invalidtoken"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusUnauthorized,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
 			name: "default auth",
@@ -125,8 +125,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "default auth for unmatched method",
@@ -156,8 +156,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "default auth for unmatched path",
@@ -187,8 +187,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "existing claim",
@@ -216,8 +216,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "matching claim",
@@ -246,8 +246,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "matching claim wrong value",
@@ -276,8 +276,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusForbidden,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
 		},
 		{
 			name: "matching claim for matching method",
@@ -307,8 +307,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "matching claim in array",
@@ -338,8 +338,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"CbA8KltMAe2DJWvZ3LXm25U"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "matching multiple claims",
@@ -372,8 +372,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: true,
-			wantStatusCode:       0,
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
 		},
 		{
 			name: "missing claim",
@@ -402,8 +402,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusForbidden,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
 		},
 		{
 			name: "missing claim in array",
@@ -433,8 +433,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"CbA8KltMAe2DJWvZ3LXm25U"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusForbidden,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
 		},
 		{
 			name: "partially matching claims",
@@ -467,8 +467,8 @@ func TestBouncer_Proxy(t *testing.T) {
 						"NTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"},
 				},
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusForbidden,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
 		},
 		{
 			name: "invalid path regex",
@@ -492,11 +492,11 @@ func TestBouncer_Proxy(t *testing.T) {
 				Method:     "GET",
 				RequestURI: "/test/",
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusInternalServerError,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusInternalServerError,
 		},
 		{
-			name: "non-existing claim policy mentioned",
+			name: "non-existing claim policy mentioned in path config",
 			fields: fields{
 				ClaimPolicies: map[string][]bouncer.ClaimPolicy{},
 				PathConfigs: []bouncer.PathConfig{
@@ -510,12 +510,12 @@ func TestBouncer_Proxy(t *testing.T) {
 				Method:     "GET",
 				RequestURI: "/test/",
 			},
-			wantHttpServerCalled: false,
-			wantStatusCode:       http.StatusInternalServerError,
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusInternalServerError,
 		},
 	}
 
-	httpServer := &mocks.HttpServer{}
+	upstream := &mocks.HttpServer{}
 	responseWriter := &mocks.ResponseWriter{}
 	header := http.Header{}
 
@@ -524,22 +524,21 @@ func TestBouncer_Proxy(t *testing.T) {
 			b := bouncer.Bouncer{
 				ClaimPolicies: tt.fields.ClaimPolicies,
 				PathConfigs:   tt.fields.PathConfigs,
-				HttpServer:    httpServer,
+				Upstream:      upstream,
 			}
 
-			if tt.wantHttpServerCalled {
-				httpServer.On("ServeHTTP", responseWriter, tt.request).Return()
+			if tt.wantUpstreamCalled {
+				upstream.On("ServeHTTP", responseWriter, tt.request).Return()
 			} else {
 				responseWriter.On("WriteHeader", tt.wantStatusCode).Return()
 				responseWriter.On("Header").Return(header)
-				httpServer.AssertNotCalled(t, "ServeHttp", responseWriter, tt.request)
-
+				upstream.AssertNotCalled(t, "ServeHttp", responseWriter, tt.request)
 			}
 
 			b.Proxy(responseWriter, tt.request)
 
 			responseWriter.AssertExpectations(t)
-			httpServer.AssertExpectations(t)
+			upstream.AssertExpectations(t)
 
 			if tt.wantStatusCode == http.StatusUnauthorized {
 				assert.Equal(t, "Bearer", header["Www-Authenticate"][0])

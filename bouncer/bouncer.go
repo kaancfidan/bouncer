@@ -27,7 +27,7 @@ type PathConfig struct {
 type Bouncer struct {
 	ClaimPolicies map[string][]ClaimPolicy
 	PathConfigs   []PathConfig
-	HttpServer    HttpServer
+	Upstream      HttpServer
 }
 
 type HttpServer interface {
@@ -36,7 +36,7 @@ type HttpServer interface {
 
 func New(upstreamUrl *url.URL) Bouncer {
 	return Bouncer{
-		HttpServer: httputil.NewSingleHostReverseProxy(upstreamUrl),
+		Upstream: httputil.NewSingleHostReverseProxy(upstreamUrl),
 	}
 }
 
@@ -69,7 +69,7 @@ func (b Bouncer) Proxy(writer http.ResponseWriter, request *http.Request) {
 
 	if allowAnon {
 		log.Printf("[%v] Allowed anonymous request.", requestId)
-		b.HttpServer.ServeHTTP(writer, request)
+		b.Upstream.ServeHTTP(writer, request)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (b Bouncer) Proxy(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	b.HttpServer.ServeHTTP(writer, request)
+	b.Upstream.ServeHTTP(writer, request)
 }
 
 func (b Bouncer) checkClaims(pathConfigs []PathConfig, claims jwt.MapClaims) (failedPolicy string) {
