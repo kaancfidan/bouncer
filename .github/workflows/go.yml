@@ -24,13 +24,12 @@ jobs:
     - name: Test and cover
       run: |
         CVPKG=$(go list ./... | grep -v -e "mocks" | tr '\n' ',')
-        go test ./... -race -coverpkg $CVPKG -coverprofile=coverage.out
+        go test -race -coverpkg $CVPKG -coverprofile c.out ./...
 
     - name: Publish coverage
       uses: paambaati/codeclimate-action@v2.6.0
       env:
         CC_TEST_REPORTER_ID: 0ddef62a1666e827df2987cb83e5fcd08d1f21d44e9d69b638e7101e557c2020
       with:
-        coverageCommand: go tool cover -func=coverage.out
-        
-
+        coverageCommand: go tool cover -func=c.out
+        debug: true
