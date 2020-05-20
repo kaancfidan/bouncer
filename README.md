@@ -1,2 +1,4 @@
 # jwt-bouncer
-Claims-based access control sidecar app
+![Go](https://github.com/kaancfidan/jwt-bouncer/workflows/Go/badge.svg)
+
+Sidecar reverse proxy for claims-based access control (CBAC)

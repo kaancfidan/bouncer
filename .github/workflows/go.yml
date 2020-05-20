@@ -1,0 +1,30 @@
+name: Go
+
+on: [push, pull_request]
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@master
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@master
+
+    - name: Build
+      run: go build -v .
+
+    - name: Test and cover
+      run: |
+        CVPKG=$(go list ./... | grep -v -e "mocks" | tr '\n' ',')
+        go test ./... -race -coverpkg $CVPKG -coverprofile=coverage.out
+        go tool cover -func=coverage.out
+        
+
