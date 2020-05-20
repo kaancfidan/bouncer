@@ -25,6 +25,7 @@ jobs:
       run: |
         CVPKG=$(go list ./... | grep -v -e "mocks" | tr '\n' ',')
         go test ./... -race -coverpkg $CVPKG -coverprofile=coverage.out
+        
     - name: Publish coverage
       uses: paambaati/codeclimate-action@v2.2.4
       env:
