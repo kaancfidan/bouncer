@@ -1,7 +1,7 @@
 # jwt-bouncer ![bouncer](https://github.com/kaancfidan/jwt-bouncer/blob/master/gopher.png)
 ![Go](https://github.com/kaancfidan/jwt-bouncer/workflows/Go/badge.svg) [![Maintainability](https://api.codeclimate.com/v1/badges/e0018675c1b3b0beae61/maintainability)](https://codeclimate.com/github/kaancfidan/jwt-bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/jwt-bouncer)](https://codecov.io/gh/kaancfidan/jwt-bouncer)
 
-JWT Bouncer is a sidecar reverse proxy for authentication and authorization through [JSON Web Tokens (JWT)](http://jwt.io). 
+JWT Bouncer is a sidecar reverse proxy for authentication and authorization via [JSON Web Tokens](http://jwt.io). 
 
 ## Purpose
 [Sidecar deployment](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) for authentication and authorization excludes related logic out of application codebases. Although it can be used alongside monolithic apps, it is much more relevant to microservice architectures where changing & redeploying tens or hundreds of services just for an added authorization policy (e.g. a new role) is not feasible. 
