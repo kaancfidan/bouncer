@@ -7,16 +7,20 @@ type RouteMatcher interface {
 	MatchRoutePolicies(path string, method string) ([]RoutePolicy, error)
 }
 
-type routeMatcherImpl struct {
+// RouteMatcherImpl implements glob-based route matching
+type RouteMatcherImpl struct {
 	routePolicies []RoutePolicy
 }
 
-func NewRouteMatcher(routePolicies []RoutePolicy) *routeMatcherImpl {
-	return &routeMatcherImpl{routePolicies: routePolicies}
+// NewRouteMatcher creates a new RouteMatcherImpl instance
+func NewRouteMatcher(routePolicies []RoutePolicy) *RouteMatcherImpl {
+	return &RouteMatcherImpl{routePolicies: routePolicies}
 }
 
-// routeMatcherImpl matches given path configurations with regexp
-func (g routeMatcherImpl) MatchRoutePolicies(path string, method string) ([]RoutePolicy, error) {
+// MatchRoutePolicies matches given the request path-method pair to configured routes
+// Paths are matched using standard wildcard globs
+// If no method is specified in the configuration, that route matches to all methods
+func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]RoutePolicy, error) {
 	matches := make([]RoutePolicy, 0)
 	for _, rp := range g.routePolicies {
 		g, err := glob.Compile(rp.Path, '/')

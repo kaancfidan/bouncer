@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// Server is a reverse proxy that receives requests and forwards them to the upstream server,
+// if they pass authentication and authorization challenges.
 type Server struct {
 	Upstream      http.Handler
 	RouteMatcher  RouteMatcher
@@ -14,6 +16,8 @@ type Server struct {
 	Authenticator Authenticator
 }
 
+// Proxy performs authentication and authorization challenges based on given configuration
+// and forwards the request to the upstream server.
 func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 	requestID := uuid.New()
 

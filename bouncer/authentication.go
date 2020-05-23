@@ -12,12 +12,14 @@ type Authenticator interface {
 	Authenticate(authHeader string) (claims map[string]interface{}, err error)
 }
 
-type authenticatorImpl struct {
+// AuthenticatorImpl is a JWT based authentication implementation
+type AuthenticatorImpl struct {
 	keyFunc func(*jwt.Token) (interface{}, error)
 }
 
-func NewAuthenticator(hmacKey []byte) *authenticatorImpl {
-	return &authenticatorImpl{
+// NewAuthenticator creates a new AuthenticatorImpl instance
+func NewAuthenticator(hmacKey []byte) *AuthenticatorImpl {
+	return &AuthenticatorImpl{
 		keyFunc: func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); ok {
 				return hmacKey, nil
@@ -29,7 +31,7 @@ func NewAuthenticator(hmacKey []byte) *authenticatorImpl {
 }
 
 // Authenticate implements Bearer token authentication
-func (a authenticatorImpl) Authenticate(authHeader string) (map[string]interface{}, error) {
+func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface{}, error) {
 	// check Bearer token
 	splitToken := strings.Split(authHeader, "Bearer ")
 

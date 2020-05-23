@@ -2,21 +2,23 @@ package bouncer
 
 import "fmt"
 
-// Claims based authorization interface
+// Authorizer is the claims-based authorization interface
 type Authorizer interface {
 	Authorize(policyNames []string, claims map[string]interface{}) (failedPolicy string, err error)
 	IsAnonymousAllowed(matchedPolicies []RoutePolicy) bool
 }
 
-type authorizerImpl struct {
+// AuthorizerImpl implements claims base authorization
+type AuthorizerImpl struct {
 	claimPolicies map[string][]ClaimPolicy
 }
 
-func NewAuthorizer(claimPolicies map[string][]ClaimPolicy) *authorizerImpl {
-	return &authorizerImpl{claimPolicies: claimPolicies}
+// NewAuthorizer creates a new AuthorizerImpl instance
+func NewAuthorizer(claimPolicies map[string][]ClaimPolicy) *AuthorizerImpl {
+	return &AuthorizerImpl{claimPolicies: claimPolicies}
 }
 
-func (a authorizerImpl) getClaimPolicies(policyNames []string) ([]ClaimPolicy, error) {
+func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]ClaimPolicy, error) {
 	keys := make(map[string]bool)
 	var claimPolicies []ClaimPolicy
 
@@ -39,8 +41,8 @@ func (a authorizerImpl) getClaimPolicies(policyNames []string) ([]ClaimPolicy, e
 	return claimPolicies, nil
 }
 
-// Authorize checks claim values and returns the first failed route policy
-func (a authorizerImpl) Authorize(policyNames []string, claims map[string]interface{}) (failedClaim string, err error) {
+// Authorize checks claim values and returns the first failed claim
+func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interface{}) (failedClaim string, err error) {
 	claimPolicies, err := a.getClaimPolicies(policyNames)
 	if err != nil {
 		return "", err
@@ -90,7 +92,7 @@ func (a authorizerImpl) Authorize(policyNames []string, claims map[string]interf
 
 // IsAnonymousAllowed checks if the matched policies all have allow anonymous flags set to true
 // if no route is configured, default behaviour is to authenticate
-func (a authorizerImpl) IsAnonymousAllowed(matchedPolicies []RoutePolicy) bool {
+func (a AuthorizerImpl) IsAnonymousAllowed(matchedPolicies []RoutePolicy) bool {
 	allowAnon := len(matchedPolicies) > 0
 	for _, p := range matchedPolicies {
 		if !p.AllowAnonymous {
