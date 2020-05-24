@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/gobwas/glob"
 
 	"github.com/kaancfidan/bouncer/models"
@@ -27,13 +29,16 @@ func NewRouteMatcher(routePolicies []models.RoutePolicy) *RouteMatcherImpl {
 func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]models.RoutePolicy, error) {
 	matches := make([]models.RoutePolicy, 0)
 	for _, rp := range g.routePolicies {
-		g, err := glob.Compile(rp.Path, '/')
+		normalizedPath := strings.Trim(path, " \t\n/")
+		normalizedPolicyPath := strings.Trim(rp.Path, " \t\n/")
+
+		g, err := glob.Compile(normalizedPolicyPath, '/')
 		if err != nil {
 			return nil, err
 		}
 
 		// check if route matches
-		if !g.Match(path) {
+		if !g.Match(normalizedPath) {
 			continue
 		}
 

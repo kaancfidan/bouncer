@@ -14,17 +14,17 @@ type Authorizer interface {
 
 // AuthorizerImpl implements claims base authorization
 type AuthorizerImpl struct {
-	claimPolicies map[string][]models.ClaimPolicy
+	claimPolicies map[string][]models.ClaimRequirement
 }
 
 // NewAuthorizer creates a new AuthorizerImpl instance
-func NewAuthorizer(claimPolicies map[string][]models.ClaimPolicy) *AuthorizerImpl {
+func NewAuthorizer(claimPolicies map[string][]models.ClaimRequirement) *AuthorizerImpl {
 	return &AuthorizerImpl{claimPolicies: claimPolicies}
 }
 
-func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]models.ClaimPolicy, error) {
+func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]models.ClaimRequirement, error) {
 	keys := make(map[string]bool)
-	var claimPolicies []models.ClaimPolicy
+	var claimPolicies []models.ClaimRequirement
 
 	for _, policyName := range policyNames {
 		// policy already added
@@ -61,7 +61,7 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 		}
 
 		// if no value specified, policy passes just by existing
-		if cp.Value == "" {
+		if cp.Values == nil {
 			continue
 		}
 
@@ -70,8 +70,14 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 		if arr, ok := claim.([]interface{}); ok {
 			found := false
 			for _, val := range arr {
-				if val == cp.Value {
-					found = true
+				for _, cfgVal := range cp.Values {
+					if val == cfgVal {
+						found = true
+						break
+					}
+				}
+
+				if found {
 					break
 				}
 			}
@@ -85,9 +91,16 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 		}
 
 		// if the matching claim is not an array, check direct equality with expectation
-		if claims[cp.Claim] != cp.Value {
+		found := false
+		for _, cfgVal := range cp.Values {
+			if claims[cp.Claim] == cfgVal {
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			failedClaim = cp.Claim
-			break
 		}
 	}
 

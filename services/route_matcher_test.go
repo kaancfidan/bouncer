@@ -8,7 +8,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
+func Test_RouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 	tests := []struct {
 		name          string
 		routePolicies []models.RoutePolicy
@@ -44,6 +44,30 @@ func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "exact matched route with trailing separator",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			path:   "/test",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "exact matched route with spaces all around",
+			routePolicies: []models.RoutePolicy{
+				{Path: " /test/ ", Methods: []string{"GET"}},
+			},
+			path:   "/test",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: " /test/ ", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
 			name: "matched path without method specification",
 			routePolicies: []models.RoutePolicy{
 				{Path: "/test"},
@@ -63,6 +87,15 @@ func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			want: []models.RoutePolicy{
 				{Path: "/*"},
 			},
+			wantErr: false,
+		},
+		{
+			name: "exact path does not match subpaths",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/"},
+			},
+			path:    "/test",
+			want:    []models.RoutePolicy{},
 			wantErr: false,
 		},
 		{
