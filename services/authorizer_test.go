@@ -7,7 +7,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_authorizerImpl_Authorize(t *testing.T) {
+func Test_AuthorizerImpl_Authorize(t *testing.T) {
 	type args struct {
 		policyNames []string
 		claims      map[string]interface{}
@@ -15,14 +15,14 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		claimPolicies   map[string][]models.ClaimPolicy
+		claimPolicies   map[string][]models.ClaimRequirement
 		args            args
 		wantFailedClaim string
 		wantErr         bool
 	}{
 		{
 			name:          "zero config - no claims",
-			claimPolicies: map[string][]models.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: make([]string, 0),
 				claims:      map[string]interface{}{},
@@ -32,7 +32,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name:          "zero config - irrelevant claims",
-			claimPolicies: map[string][]models.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: make([]string, 0),
 				claims: map[string]interface{}{
@@ -44,7 +44,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name:          "non-existing policy",
-			claimPolicies: map[string][]models.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: []string{"NonExistingPolicyName"},
 				claims:      map[string]interface{}{},
@@ -54,9 +54,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim exists",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"HasName": {
-					models.ClaimPolicy{
+					models.ClaimRequirement{
 						Claim: "name",
 					},
 				},
@@ -72,9 +72,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim does not exist",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"HasName": {
-					models.ClaimPolicy{
+					models.ClaimRequirement{
 						Claim: "name",
 					},
 				},
@@ -90,11 +90,11 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim value matches",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"NamedJohn": {
-					models.ClaimPolicy{
-						Claim: "name",
-						Value: "John",
+					models.ClaimRequirement{
+						Claim:  "name",
+						Values: []string{"John"},
 					},
 				},
 			},
@@ -109,11 +109,11 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim value does not match",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"NamedJohn": {
-					models.ClaimPolicy{
-						Claim: "name",
-						Value: "John",
+					models.ClaimRequirement{
+						Claim:  "name",
+						Values: []string{"John"},
 					},
 				},
 			},
@@ -128,15 +128,15 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "multiple claim values match",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"SpecificJohn": {
-					models.ClaimPolicy{
-						Claim: "name",
-						Value: "John",
+					models.ClaimRequirement{
+						Claim:  "name",
+						Values: []string{"John"},
 					},
-					models.ClaimPolicy{
-						Claim: "last_name",
-						Value: "Doe",
+					models.ClaimRequirement{
+						Claim:  "last_name",
+						Values: []string{"Doe"},
 					},
 				},
 			},
@@ -152,15 +152,15 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "multiple claim values, one does not match",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"SpecificJohn": {
-					models.ClaimPolicy{
-						Claim: "name",
-						Value: "John",
+					models.ClaimRequirement{
+						Claim:  "name",
+						Values: []string{"John"},
 					},
-					models.ClaimPolicy{
-						Claim: "last_name",
-						Value: "Doe",
+					models.ClaimRequirement{
+						Claim:  "last_name",
+						Values: []string{"Doe"},
 					},
 				},
 			},
@@ -176,11 +176,11 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "array claim value matches",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"CanTest": {
-					models.ClaimPolicy{
-						Claim: "permission",
-						Value: "Test",
+					models.ClaimRequirement{
+						Claim:  "permission",
+						Values: []string{"Test"},
 					},
 				},
 			},
@@ -195,11 +195,11 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "array claim does not match",
-			claimPolicies: map[string][]models.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimRequirement{
 				"CanDelete": {
-					models.ClaimPolicy{
-						Claim: "permission",
-						Value: "Delete",
+					models.ClaimRequirement{
+						Claim:  "permission",
+						Values: []string{"Delete"},
 					},
 				},
 			},
@@ -210,6 +210,44 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 				},
 			},
 			wantFailedClaim: "permission",
+			wantErr:         false,
+		},
+		{
+			name: "value claim match to array",
+			claimPolicies: map[string][]models.ClaimRequirement{
+				"CanAddOrDelete": {
+					models.ClaimRequirement{
+						Claim:  "permission",
+						Values: []string{"Add", "Delete"},
+					},
+				},
+			},
+			args: args{
+				policyNames: []string{"CanAddOrDelete"},
+				claims: map[string]interface{}{
+					"permission": "Add",
+				},
+			},
+			wantFailedClaim: "",
+			wantErr:         false,
+		},
+		{
+			name: "array claim match to array",
+			claimPolicies: map[string][]models.ClaimRequirement{
+				"CanAddOrDelete": {
+					models.ClaimRequirement{
+						Claim:  "permission",
+						Values: []string{"Add", "Delete"},
+					},
+				},
+			},
+			args: args{
+				policyNames: []string{"CanAddOrDelete"},
+				claims: map[string]interface{}{
+					"permission": []interface{}{"Test", "Add"},
+				},
+			},
+			wantFailedClaim: "",
 			wantErr:         false,
 		},
 	}
@@ -231,7 +269,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 	}
 }
 
-func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
+func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 	tests := []struct {
 		name            string
 		matchedPolicies []models.RoutePolicy
@@ -279,7 +317,7 @@ func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := services.NewAuthorizer(map[string][]models.ClaimPolicy{})
+			a := services.NewAuthorizer(map[string][]models.ClaimRequirement{})
 
 			if got := a.IsAnonymousAllowed(tt.matchedPolicies); got != tt.want {
 				t.Errorf("IsAnonymousAllowed() = %v, want %v", got, tt.want)

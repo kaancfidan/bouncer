@@ -30,9 +30,11 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	matchedPolicyNames := make([]string, len(matchedPolicies))
-	for i, r := range matchedPolicies {
-		matchedPolicyNames[i] = r.PolicyName
+	var matchedPolicyNames []string
+	for _, r := range matchedPolicies {
+		if r.PolicyName != "" {
+			matchedPolicyNames = append(matchedPolicyNames, r.PolicyName)
+		}
 	}
 
 	log.Printf("[%v] Policies matched: %v", requestID, matchedPolicyNames)
@@ -54,15 +56,15 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	failedPolicy, err := s.Authorizer.Authorize(matchedPolicyNames, claims)
+	failedClaim, err := s.Authorizer.Authorize(matchedPolicyNames, claims)
 	if err != nil {
 		log.Printf("[%v] Error while authorizing: %v", requestID, err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if failedPolicy != "" {
-		log.Printf("[%v] Policy %s failed.", requestID, failedPolicy)
+	if failedClaim != "" {
+		log.Printf("[%v] Check for claim %s failed.", requestID, failedClaim)
 		writer.WriteHeader(http.StatusForbidden)
 		return
 	}
