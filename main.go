@@ -8,7 +8,10 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/kaancfidan/jwt-bouncer/bouncer"
+	"github.com/go-yaml/yaml"
+
+	"github.com/kaancfidan/bouncer/models"
+	"github.com/kaancfidan/bouncer/services"
 )
 
 func main() {
@@ -20,21 +23,22 @@ func main() {
 		log.Fatalf("upstream url could not be parsed: %v", err)
 	}
 
-	data, err := ioutil.ReadFile(configPath)
+	cfgData, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		log.Fatalf("could not read config file: %v", err)
 	}
 
-	cfg, err := bouncer.ParseConfig(data)
+	cfg := models.Config{}
+	err = yaml.Unmarshal(cfgData, &cfg)
 	if err != nil {
 		log.Fatalf("could not parse config file: %v", err)
 	}
 
-	server := bouncer.Server{
+	server := services.Server{
 		Upstream:      httputil.NewSingleHostReverseProxy(upstreamURL),
-		RouteMatcher:  bouncer.NewRouteMatcher(cfg.RoutePolicies),
-		Authorizer:    bouncer.NewAuthorizer(cfg.ClaimPolicies),
-		Authenticator: bouncer.NewAuthenticator([]byte(hmacKey)),
+		RouteMatcher:  services.NewRouteMatcher(cfg.RoutePolicies),
+		Authorizer:    services.NewAuthorizer(cfg.ClaimPolicies),
+		Authenticator: services.NewAuthenticator([]byte(hmacKey)),
 	}
 
 	http.HandleFunc("/", server.Proxy)

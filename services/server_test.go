@@ -1,4 +1,4 @@
-package bouncer_test
+package services_test
 
 import (
 	"fmt"
@@ -8,8 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/kaancfidan/jwt-bouncer/bouncer"
-	"github.com/kaancfidan/jwt-bouncer/mocks"
+	"github.com/kaancfidan/bouncer/mocks"
+	"github.com/kaancfidan/bouncer/models"
+	"github.com/kaancfidan/bouncer/services"
 )
 
 func TestServer_Proxy(t *testing.T) {
@@ -41,7 +42,7 @@ func TestServer_Proxy(t *testing.T) {
 				authenticator *mocks.Authenticator,
 				authorizer *mocks.Authorizer) {
 
-				matchedRoutes := []bouncer.RoutePolicy{
+				matchedRoutes := []models.RoutePolicy{
 					{
 						Path:           "/",
 						AllowAnonymous: true,
@@ -65,7 +66,7 @@ func TestServer_Proxy(t *testing.T) {
 				authorizer *mocks.Authorizer) {
 
 				// no route policy matched
-				matchedRoutes := make([]bouncer.RoutePolicy, 0)
+				matchedRoutes := make([]models.RoutePolicy, 0)
 
 				claims := map[string]interface{}{
 					"claim": "value",
@@ -98,7 +99,7 @@ func TestServer_Proxy(t *testing.T) {
 				authorizer *mocks.Authorizer) {
 
 				// no route policy matched
-				matchedRoutes := make([]bouncer.RoutePolicy, 0)
+				matchedRoutes := make([]models.RoutePolicy, 0)
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
@@ -120,7 +121,7 @@ func TestServer_Proxy(t *testing.T) {
 				authorizer *mocks.Authorizer) {
 
 				// no route policy matched
-				matchedRoutes := []bouncer.RoutePolicy{
+				matchedRoutes := []models.RoutePolicy{
 					{
 						Path:       "/",
 						PolicyName: "SomePolicy",
@@ -158,7 +159,7 @@ func TestServer_Proxy(t *testing.T) {
 				authorizer *mocks.Authorizer) {
 
 				// no route policy matched
-				matchedRoutes := []bouncer.RoutePolicy{
+				matchedRoutes := []models.RoutePolicy{
 					{
 						Path:       "/",
 						PolicyName: "SomePolicy",
@@ -204,7 +205,7 @@ func TestServer_Proxy(t *testing.T) {
 		authorizer := &mocks.Authorizer{}
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := bouncer.Server{
+			s := services.Server{
 				Upstream:      upstream,
 				RouteMatcher:  routeMatcher,
 				Authorizer:    authorizer,

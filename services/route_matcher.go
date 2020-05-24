@@ -1,27 +1,31 @@
-package bouncer
+package services
 
-import "github.com/gobwas/glob"
+import (
+	"github.com/gobwas/glob"
+
+	"github.com/kaancfidan/bouncer/models"
+)
 
 // RouteMatcher matches given path and method to configured route policies
 type RouteMatcher interface {
-	MatchRoutePolicies(path string, method string) ([]RoutePolicy, error)
+	MatchRoutePolicies(path string, method string) ([]models.RoutePolicy, error)
 }
 
 // RouteMatcherImpl implements glob-based route matching
 type RouteMatcherImpl struct {
-	routePolicies []RoutePolicy
+	routePolicies []models.RoutePolicy
 }
 
 // NewRouteMatcher creates a new RouteMatcherImpl instance
-func NewRouteMatcher(routePolicies []RoutePolicy) *RouteMatcherImpl {
+func NewRouteMatcher(routePolicies []models.RoutePolicy) *RouteMatcherImpl {
 	return &RouteMatcherImpl{routePolicies: routePolicies}
 }
 
 // MatchRoutePolicies matches given the request path-method pair to configured routes
 // Paths are matched using standard wildcard globs
 // If no method is specified in the configuration, that route matches to all methods
-func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]RoutePolicy, error) {
-	matches := make([]RoutePolicy, 0)
+func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]models.RoutePolicy, error) {
+	matches := make([]models.RoutePolicy, 0)
 	for _, rp := range g.routePolicies {
 		g, err := glob.Compile(rp.Path, '/')
 		if err != nil {

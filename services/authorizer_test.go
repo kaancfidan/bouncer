@@ -1,9 +1,10 @@
-package bouncer_test
+package services_test
 
 import (
 	"testing"
 
-	"github.com/kaancfidan/jwt-bouncer/bouncer"
+	"github.com/kaancfidan/bouncer/models"
+	"github.com/kaancfidan/bouncer/services"
 )
 
 func Test_authorizerImpl_Authorize(t *testing.T) {
@@ -14,14 +15,14 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		claimPolicies   map[string][]bouncer.ClaimPolicy
+		claimPolicies   map[string][]models.ClaimPolicy
 		args            args
 		wantFailedClaim string
 		wantErr         bool
 	}{
 		{
 			name:          "zero config - no claims",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimPolicy{},
 			args: args{
 				policyNames: make([]string, 0),
 				claims:      map[string]interface{}{},
@@ -31,7 +32,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name:          "zero config - irrelevant claims",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimPolicy{},
 			args: args{
 				policyNames: make([]string, 0),
 				claims: map[string]interface{}{
@@ -43,7 +44,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name:          "non-existing policy",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{},
+			claimPolicies: map[string][]models.ClaimPolicy{},
 			args: args{
 				policyNames: []string{"NonExistingPolicyName"},
 				claims:      map[string]interface{}{},
@@ -53,9 +54,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim exists",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"HasName": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 					},
 				},
@@ -71,9 +72,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim does not exist",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"HasName": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 					},
 				},
@@ -89,9 +90,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim value matches",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"NamedJohn": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 						Value: "John",
 					},
@@ -108,9 +109,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "claim value does not match",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"NamedJohn": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 						Value: "John",
 					},
@@ -127,13 +128,13 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "multiple claim values match",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"SpecificJohn": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 						Value: "John",
 					},
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "last_name",
 						Value: "Doe",
 					},
@@ -151,13 +152,13 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "multiple claim values, one does not match",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"SpecificJohn": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "name",
 						Value: "John",
 					},
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "last_name",
 						Value: "Doe",
 					},
@@ -175,9 +176,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "array claim value matches",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"CanTest": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "permission",
 						Value: "Test",
 					},
@@ -194,9 +195,9 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 		},
 		{
 			name: "array claim does not match",
-			claimPolicies: map[string][]bouncer.ClaimPolicy{
+			claimPolicies: map[string][]models.ClaimPolicy{
 				"CanDelete": {
-					bouncer.ClaimPolicy{
+					models.ClaimPolicy{
 						Claim: "permission",
 						Value: "Delete",
 					},
@@ -214,7 +215,7 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := bouncer.NewAuthorizer(tt.claimPolicies)
+			a := services.NewAuthorizer(tt.claimPolicies)
 
 			gotFailedPolicy, err := a.Authorize(tt.args.policyNames, tt.args.claims)
 
@@ -233,27 +234,27 @@ func Test_authorizerImpl_Authorize(t *testing.T) {
 func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
 	tests := []struct {
 		name            string
-		matchedPolicies []bouncer.RoutePolicy
+		matchedPolicies []models.RoutePolicy
 		want            bool
 	}{
 		{
 			name:            "empty config",
-			matchedPolicies: []bouncer.RoutePolicy{},
+			matchedPolicies: []models.RoutePolicy{},
 			want:            false,
 		},
 		{
 			name:            "single allow",
-			matchedPolicies: []bouncer.RoutePolicy{{AllowAnonymous: true}},
+			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: true}},
 			want:            true,
 		},
 		{
 			name:            "single disallow",
-			matchedPolicies: []bouncer.RoutePolicy{{AllowAnonymous: false}},
+			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: false}},
 			want:            false,
 		},
 		{
 			name: "one allow one disallow",
-			matchedPolicies: []bouncer.RoutePolicy{
+			matchedPolicies: []models.RoutePolicy{
 				{AllowAnonymous: true},
 				{AllowAnonymous: false},
 			},
@@ -261,7 +262,7 @@ func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
 		},
 		{
 			name: "both allow",
-			matchedPolicies: []bouncer.RoutePolicy{
+			matchedPolicies: []models.RoutePolicy{
 				{AllowAnonymous: true},
 				{AllowAnonymous: true},
 			},
@@ -269,7 +270,7 @@ func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
 		},
 		{
 			name: "both disallow",
-			matchedPolicies: []bouncer.RoutePolicy{
+			matchedPolicies: []models.RoutePolicy{
 				{AllowAnonymous: false},
 				{AllowAnonymous: false},
 			},
@@ -278,7 +279,7 @@ func Test_authorizerImpl_IsAnonymousAllowed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := bouncer.NewAuthorizer(map[string][]bouncer.ClaimPolicy{})
+			a := services.NewAuthorizer(map[string][]models.ClaimPolicy{})
 
 			if got := a.IsAnonymousAllowed(tt.matchedPolicies); got != tt.want {
 				t.Errorf("IsAnonymousAllowed() = %v, want %v", got, tt.want)
