@@ -1,5 +1,5 @@
 # Bouncer ![bouncer](https://github.com/kaancfidan/bouncer/blob/master/gopher.png)
-![Go](https://github.com/kaancfidan/bouncer/workflows/Go/badge.svg) [![Maintainability](https://api.codeclimate.com/v1/badges/e0018675c1b3b0beae61/maintainability)](https://codeclimate.com/github/kaancfidan/bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/bouncer)](https://codecov.io/gh/kaancfidan/bouncer)
+![Go](https://github.com/kaancfidan/bouncer/workflows/Go/badge.svg) [![Maintainability](https://api.codeclimate.com/v1/badges/a4d16c48c6d1b41e1ea9/maintainability)](https://codeclimate.com/github/kaancfidan/bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/bouncer)](https://codecov.io/gh/kaancfidan/bouncer)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fjwt-bouncer.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fjwt-bouncer?ref=badge_shield)
 
 Bouncer is a sidecar reverse proxy for authentication and authorization via [JSON Web Tokens](http://jwt.io). 
