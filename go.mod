@@ -1,4 +1,4 @@
-module github.com/kaancfidan/jwt-bouncer
+module github.com/kaancfidan/bouncer
 
 go 1.13
 

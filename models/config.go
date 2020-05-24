@@ -1,6 +1,4 @@
-package bouncer
-
-import "github.com/go-yaml/yaml"
+package models
 
 // ClaimPolicy is a key-value pair for a given claim constraint
 type ClaimPolicy struct {
@@ -20,16 +18,4 @@ type RoutePolicy struct {
 type Config struct {
 	ClaimPolicies map[string][]ClaimPolicy
 	RoutePolicies []RoutePolicy
-}
-
-// ParseConfig accepts a YAML file content and returns a parsed Config object
-func ParseConfig(data []byte) (*Config, error) {
-	cfg := Config{}
-
-	err := yaml.Unmarshal(data, &cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
 }

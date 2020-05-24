@@ -1,30 +1,31 @@
-package bouncer_test
+package services_test
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/kaancfidan/jwt-bouncer/bouncer"
+	"github.com/kaancfidan/bouncer/models"
+	"github.com/kaancfidan/bouncer/services"
 )
 
 func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
 	tests := []struct {
 		name          string
-		routePolicies []bouncer.RoutePolicy
+		routePolicies []models.RoutePolicy
 		path          string
 		method        string
-		want          []bouncer.RoutePolicy
+		want          []models.RoutePolicy
 		wantErr       bool
 	}{
 		{
 			name:          "empty config",
-			routePolicies: []bouncer.RoutePolicy{},
-			want:          []bouncer.RoutePolicy{},
+			routePolicies: []models.RoutePolicy{},
+			want:          []models.RoutePolicy{},
 			wantErr:       false,
 		},
 		{
 			name: "glob error",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "[unmatched parantheses"},
 			},
 			want:    nil,
@@ -32,77 +33,77 @@ func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
 		},
 		{
 			name: "exact matched route",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/test", Methods: []string{"GET"}},
 			},
 			path:   "/test",
 			method: "GET",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/test", Methods: []string{"GET"}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "matched path without method specification",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/test"},
 			},
 			path: "/test",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/test"},
 			},
 			wantErr: false,
 		},
 		{
 			name: "glob matched route",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/*"},
 			},
 			path: "/test",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/*"},
 			},
 			wantErr: false,
 		},
 		{
 			name: "single star glob does not include all subpaths",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/test/*"},
 			},
 			path:    "/test/1/2",
-			want:    []bouncer.RoutePolicy{},
+			want:    []models.RoutePolicy{},
 			wantErr: false,
 		},
 		{
 			name: "double star glob includes all subpaths",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/test/**"},
 			},
 			path: "/test/1/2",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/test/**"},
 			},
 			wantErr: false,
 		},
 		{
 			name: "glob in-between",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/test/*/perform"},
 			},
 			path: "/test/1/perform",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/test/*/perform"},
 			},
 			wantErr: false,
 		},
 		{
 			name: "glob matched multiple paths",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/*"},
 				{Path: "/test"},
 			},
 			path: "/test",
-			want: []bouncer.RoutePolicy{
+			want: []models.RoutePolicy{
 				{Path: "/*"},
 				{Path: "/test"},
 			},
@@ -110,18 +111,18 @@ func Test_routeMatcherImpl_MatchRoutePolicies(t *testing.T) {
 		},
 		{
 			name: "non-matching method",
-			routePolicies: []bouncer.RoutePolicy{
+			routePolicies: []models.RoutePolicy{
 				{Path: "/*", Methods: []string{"GET"}},
 			},
 			path:    "/test",
 			method:  "POST",
-			want:    []bouncer.RoutePolicy{},
+			want:    []models.RoutePolicy{},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rm := bouncer.NewRouteMatcher(tt.routePolicies)
+			rm := services.NewRouteMatcher(tt.routePolicies)
 
 			got, err := rm.MatchRoutePolicies(tt.path, tt.method)
 

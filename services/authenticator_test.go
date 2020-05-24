@@ -1,10 +1,10 @@
-package bouncer_test
+package services_test
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/kaancfidan/jwt-bouncer/bouncer"
+	"github.com/kaancfidan/bouncer/services"
 )
 
 func Test_authenticatorImpl_Authenticate(t *testing.T) {
@@ -63,7 +63,7 @@ func Test_authenticatorImpl_Authenticate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := bouncer.NewAuthenticator(tt.hmacKey)
+			a := services.NewAuthenticator(tt.hmacKey)
 
 			got, err := a.Authenticate(tt.authHeader)
 			if (err != nil) != tt.wantErr {

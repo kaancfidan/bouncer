@@ -1,26 +1,30 @@
-package bouncer
+package services
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/kaancfidan/bouncer/models"
+)
 
 // Authorizer is the claims-based authorization interface
 type Authorizer interface {
 	Authorize(policyNames []string, claims map[string]interface{}) (failedPolicy string, err error)
-	IsAnonymousAllowed(matchedPolicies []RoutePolicy) bool
+	IsAnonymousAllowed(matchedPolicies []models.RoutePolicy) bool
 }
 
 // AuthorizerImpl implements claims base authorization
 type AuthorizerImpl struct {
-	claimPolicies map[string][]ClaimPolicy
+	claimPolicies map[string][]models.ClaimPolicy
 }
 
 // NewAuthorizer creates a new AuthorizerImpl instance
-func NewAuthorizer(claimPolicies map[string][]ClaimPolicy) *AuthorizerImpl {
+func NewAuthorizer(claimPolicies map[string][]models.ClaimPolicy) *AuthorizerImpl {
 	return &AuthorizerImpl{claimPolicies: claimPolicies}
 }
 
-func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]ClaimPolicy, error) {
+func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]models.ClaimPolicy, error) {
 	keys := make(map[string]bool)
-	var claimPolicies []ClaimPolicy
+	var claimPolicies []models.ClaimPolicy
 
 	for _, policyName := range policyNames {
 		// policy already added
@@ -92,7 +96,7 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 
 // IsAnonymousAllowed checks if the matched policies all have allow anonymous flags set to true
 // if no route is configured, default behaviour is to authenticate
-func (a AuthorizerImpl) IsAnonymousAllowed(matchedPolicies []RoutePolicy) bool {
+func (a AuthorizerImpl) IsAnonymousAllowed(matchedPolicies []models.RoutePolicy) bool {
 	allowAnon := len(matchedPolicies) > 0
 	for _, p := range matchedPolicies {
 		if !p.AllowAnonymous {
