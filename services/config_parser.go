@@ -18,7 +18,7 @@ type ConfigParser interface {
 type YamlConfigParser struct{}
 
 // ParseConfig implements config parsing from YAML files
-func (_ YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
+func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 	decoder := yaml.NewDecoder(reader)
 
 	cfg := models.Config{}

@@ -64,11 +64,12 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if failedClaim != "" {
-		log.Printf("[%v] Check for claim %s failed.", requestID, failedClaim)
+		log.Printf("[%v] Check for claim \"%s\" failed.", requestID, failedClaim)
 		writer.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	// allow
+	log.Printf("[%v] Authorized.", requestID)
 	s.Upstream.ServeHTTP(writer, request)
 }

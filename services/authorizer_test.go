@@ -276,41 +276,83 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 		want            bool
 	}{
 		{
-			name:            "empty config",
+			name:            "no matches",
 			matchedPolicies: []models.RoutePolicy{},
 			want:            false,
 		},
 		{
-			name:            "single allow",
-			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: true}},
-			want:            true,
-		},
-		{
-			name:            "single disallow",
-			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: false}},
-			want:            false,
-		},
-		{
-			name: "one allow one disallow",
+			name: "single allow",
 			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: true},
-				{AllowAnonymous: false},
-			},
-			want: false,
-		},
-		{
-			name: "both allow",
-			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: true},
-				{AllowAnonymous: true},
+				{
+					Path:           "/",
+					AllowAnonymous: true,
+				},
 			},
 			want: true,
 		},
 		{
-			name: "both disallow",
+			name: "single disallow",
 			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: false},
-				{AllowAnonymous: false},
+				{
+					Path:           "/",
+					AllowAnonymous: false,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "allow more specific - wildcard",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
+				{
+					Path:           "/users/register",
+					AllowAnonymous: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "disallow more specific - wildcard",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/**",
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/billing",
+					AllowAnonymous: false,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "allow more specific - path length",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/users/*/public",
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "disallow more specific - path length",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/**",
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
 			},
 			want: false,
 		},

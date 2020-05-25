@@ -21,21 +21,23 @@ var (
 )
 
 func main() {
-	flag.StringVar(&hmacKey, "signing-key",
+	flag.StringVar(&hmacKey, "k",
 		lookupEnv("BOUNCER_SIGNING_KEY", ""),
 		"symmetric signing key to validate tokens")
 
-	flag.StringVar(&configPath, "config-path",
+	flag.StringVar(&configPath, "p",
 		lookupEnv("BOUNCER_CONFIG_PATH", configPath),
 		fmt.Sprintf("Config YAML path, default = %s", configPath))
 
-	flag.StringVar(&upstreamURL, "upstream-url",
+	flag.StringVar(&upstreamURL, "u",
 		lookupEnv("BOUNCER_UPSTREAM_URL", ""),
 		"URL to be called when the request is authorized")
 
-	flag.StringVar(&listenAddress, "listen-address",
+	flag.StringVar(&listenAddress, "l",
 		lookupEnv("BOUNCER_LISTEN_ADDRESS", listenAddress),
 		fmt.Sprintf("listen address, default = %s", listenAddress))
+
+	flag.Parse()
 
 	// parse upstream URL
 	parsedURL, err := url.Parse(upstreamURL)
@@ -68,7 +70,7 @@ func main() {
 
 	http.HandleFunc("/", server.Proxy)
 
-	log.Printf("Bouncer (%s) starting...", version)
+	log.Printf("Bouncer [%s] started.", version)
 	defer log.Printf("Bouncer shut down.")
 
 	err = http.ListenAndServe(listenAddress, nil)
