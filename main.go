@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -24,7 +25,13 @@ type flags struct {
 func main() {
 	f := parseFlags()
 
-	server, err := newServer(f)
+	configReader, err := os.Open(f.configPath)
+	if err != nil {
+		log.Fatalf("could not open config file: %v", err)
+	}
+	defer configReader.Close()
+
+	server, err := newServer(f, configReader)
 	if err != nil {
 		log.Fatalf("server could not be created: %v", err)
 	}
@@ -38,34 +45,33 @@ func main() {
 	log.Fatal(err)
 }
 
-func newServer(p *flags) (*services.Server, error) {
+func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 	// parse upstream URL
-	parsedURL, err := url.Parse(p.upstreamURL)
+	parsedURL, err := url.Parse(f.upstreamURL)
 	if err != nil {
-		return nil, fmt.Errorf("upstream url could not be parsed: %v", err)
+		return nil, fmt.Errorf("upstream url could not be parsed: %w", err)
 	}
 
-	configReader, err := os.Open(p.configPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not open config file: %v", err)
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("upstream url scheme must be http or https")
 	}
 
 	parser := services.YamlConfigParser{}
 	cfg, err := parser.ParseConfig(configReader)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse config: %v", err)
+		return nil, fmt.Errorf("could not parse config: %w", err)
 	}
 
 	err = services.ValidateConfig(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("invalid config: %v", err)
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	s := services.Server{
 		Upstream:      httputil.NewSingleHostReverseProxy(parsedURL),
 		RouteMatcher:  services.NewRouteMatcher(cfg.RoutePolicies),
 		Authorizer:    services.NewAuthorizer(cfg.ClaimPolicies),
-		Authenticator: services.NewAuthenticator([]byte(p.hmacKey)),
+		Authenticator: services.NewAuthenticator([]byte(f.hmacKey)),
 	}
 
 	return &s, nil
