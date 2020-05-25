@@ -276,7 +276,7 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 		want            bool
 	}{
 		{
-			name:            "empty config",
+			name:            "no matches",
 			matchedPolicies: []models.RoutePolicy{},
 			want:            false,
 		},
@@ -291,24 +291,76 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 			want:            false,
 		},
 		{
-			name: "one allow one disallow",
+			name: "allow more specific - wildcard",
 			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: true},
-				{AllowAnonymous: false},
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
+				{
+					Path:           "/users/register",
+					AllowAnonymous: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "disallow more specific - wildcard",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/**",
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/billing",
+					AllowAnonymous: false,
+				},
 			},
 			want: false,
 		},
 		{
-			name: "both allow",
+			name: "allow more specific - path length",
 			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
+				{
+					Path:           "/users/*/public",
+					AllowAnonymous: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "disallow more specific - path length",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/**",
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "multiple allow",
+			matchedPolicies: []models.RoutePolicy{
+				{AllowAnonymous: true},
+				{AllowAnonymous: true},
 				{AllowAnonymous: true},
 				{AllowAnonymous: true},
 			},
 			want: true,
 		},
 		{
-			name: "both disallow",
+			name: "multiple disallow",
 			matchedPolicies: []models.RoutePolicy{
+				{AllowAnonymous: false},
+				{AllowAnonymous: false},
 				{AllowAnonymous: false},
 				{AllowAnonymous: false},
 			},
