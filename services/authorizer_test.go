@@ -332,12 +332,12 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 			name: "allow more specific - path length",
 			matchedPolicies: []models.RoutePolicy{
 				{
-					Path:           "/users/**",
-					AllowAnonymous: false,
-				},
-				{
 					Path:           "/users/*/public",
 					AllowAnonymous: true,
+				},
+				{
+					Path:           "/users/**",
+					AllowAnonymous: false,
 				},
 			},
 			want: true,
