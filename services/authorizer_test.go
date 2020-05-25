@@ -281,14 +281,24 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 			want:            false,
 		},
 		{
-			name:            "single allow",
-			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: true}},
-			want:            true,
+			name: "single allow",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/",
+					AllowAnonymous: true,
+				},
+			},
+			want: true,
 		},
 		{
-			name:            "single disallow",
-			matchedPolicies: []models.RoutePolicy{{AllowAnonymous: false}},
-			want:            false,
+			name: "single disallow",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/",
+					AllowAnonymous: false,
+				},
+			},
+			want: false,
 		},
 		{
 			name: "allow more specific - wildcard",
@@ -343,26 +353,6 @@ func Test_AuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
 					Path:           "/users/**",
 					AllowAnonymous: false,
 				},
-			},
-			want: false,
-		},
-		{
-			name: "multiple allow",
-			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: true},
-				{AllowAnonymous: true},
-				{AllowAnonymous: true},
-				{AllowAnonymous: true},
-			},
-			want: true,
-		},
-		{
-			name: "multiple disallow",
-			matchedPolicies: []models.RoutePolicy{
-				{AllowAnonymous: false},
-				{AllowAnonymous: false},
-				{AllowAnonymous: false},
-				{AllowAnonymous: false},
 			},
 			want: false,
 		},

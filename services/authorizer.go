@@ -129,13 +129,6 @@ func (a AuthorizerImpl) IsAnonymousAllowed(matchedPolicies []models.RoutePolicy)
 
 			if wc1 < wc2 { // then by decreasing number of wildcards
 				return true
-			} else if wc1 == wc2 {
-				dwc1 := strings.Count(p1, "**")
-				dwc2 := strings.Count(p2, "**")
-
-				if dwc1 < dwc2 { // then by decreasing number of double wildcards
-					return true
-				}
 			}
 		}
 		return false
