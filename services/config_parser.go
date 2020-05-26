@@ -3,6 +3,8 @@ package services
 import (
 	"fmt"
 	"io"
+	"sort"
+	"strings"
 
 	"github.com/go-yaml/yaml"
 
@@ -26,6 +28,29 @@ func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse config yaml: %v", err)
 	}
+
+	// sort route specifications with decreasing specifity
+	// this order is used to decide if anonymous requests should be allowed
+	sort.SliceStable(cfg.RoutePolicies, func(i, j int) bool {
+		p1 := strings.Trim(cfg.RoutePolicies[i].Path, "/ \t\n")
+		p2 := strings.Trim(cfg.RoutePolicies[j].Path, "/ \t\n")
+
+		pl1 := strings.Count(p1, "/")
+		pl2 := strings.Count(p2, "/")
+
+		// sort by increasing path lengths
+		if pl1 > pl2 {
+			return true
+		} else if pl1 == pl2 {
+			wc1 := strings.Count(p1, "*")
+			wc2 := strings.Count(p2, "*")
+
+			if wc1 < wc2 { // then by decreasing number of wildcards
+				return true
+			}
+		}
+		return false
+	})
 
 	return &cfg, nil
 }

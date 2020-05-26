@@ -2,8 +2,6 @@ package services
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 
 	"github.com/kaancfidan/bouncer/models"
 )
@@ -11,7 +9,6 @@ import (
 // Authorizer is the claims-based authorization interface
 type Authorizer interface {
 	Authorize(policyNames []string, claims map[string]interface{}) (failedPolicy string, err error)
-	IsAnonymousAllowed(matchedPolicies []models.RoutePolicy) bool
 }
 
 // AuthorizerImpl implements claims base authorization
@@ -111,32 +108,4 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 
 func claimEquals(claim interface{}, expectation string) bool {
 	return fmt.Sprintf("%v", claim) == expectation
-}
-
-// IsAnonymousAllowed checks if the most specific policy allows anonymous access
-// if no route is matched, default behaviour is to authenticate
-func (a AuthorizerImpl) IsAnonymousAllowed(matchedPolicies []models.RoutePolicy) bool {
-	// sort with decreasing specifity
-	sort.SliceStable(matchedPolicies, func(i, j int) bool {
-		p1 := strings.Trim(matchedPolicies[i].Path, "/ \t\n")
-		p2 := strings.Trim(matchedPolicies[j].Path, "/ \t\n")
-
-		pl1 := strings.Count(p1, "/")
-		pl2 := strings.Count(p2, "/")
-
-		// sort by increasing path lengths
-		if pl1 > pl2 {
-			return true
-		} else if pl1 == pl2 {
-			wc1 := strings.Count(p1, "*")
-			wc2 := strings.Count(p2, "*")
-
-			if wc1 < wc2 { // then by decreasing number of wildcards
-				return true
-			}
-		}
-		return false
-	})
-
-	return len(matchedPolicies) > 0 && matchedPolicies[0].AllowAnonymous
 }
