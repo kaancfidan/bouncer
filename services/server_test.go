@@ -262,6 +262,30 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 		" - path: /destroy/server\n" +
 		"   allowAnonymous: false\n"
 
+	employeeCfg := "claimPolicies:\n" +
+		" EmployeeOnly:\n" +
+		"  - claim: employee_number\n" +
+		" Founders:\n" +
+		"  - claim: employee_number\n" +
+		"    values: [1,2,3,4,5]\n" +
+		" HumanResources:\n" +
+		"  - claim: department\n" +
+		"    values: [HumanResources]\n" +
+		"routePolicies:\n" +
+		" - path: /vacation/**\n" +
+		"   policyName: EmployeeOnly\n" +
+		" - path: /vacation/policy\n" +
+		"   methods: [GET]\n" +
+		"   allowAnonymous: true\n" +
+		" - path: /vacation/*/\n" +
+		"   methods: [PUT, PATCH]\n" +
+		"   policyName: Founders\n" +
+		" - path: /salary/**\n" +
+		"   policyName: EmployeeOnly\n" +
+		" - path: /salary/*/\n" +
+		"   methods: [PUT, PATCH]\n" +
+		"   policyName: HumanResources"
+
 	hmacKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
 
 	tests := []struct {
@@ -272,7 +296,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 		wantStatusCode     int
 	}{
 		{
-			name:       "do stuff anonymously",
+			name:       "anon example - do stuff - anonymous",
 			configYaml: defaultAnonCfg,
 			request: &http.Request{
 				Method:     "POST",
@@ -282,7 +306,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     0,
 		},
 		{
-			name:       "destroy server anonymously",
+			name:       "anon example - destroy server - anonymous",
 			configYaml: defaultAnonCfg,
 			request: &http.Request{
 				Method:     "POST",
@@ -292,7 +316,172 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
-			name:       "register user",
+			name:       "anon example - destroy server - authenticated",
+			configYaml: defaultAnonCfg,
+			request: &http.Request{
+				Method:     "POST",
+				RequestURI: "/destroy/server",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+					},
+				},
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "employee example - vacation policy - anonymous",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "GET",
+				RequestURI: "/vacation/policy",
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "employee example - list vacations - unauthenticated",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "GET",
+				RequestURI: "/vacation",
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
+		},
+		{
+			name:       "employee example - list vacations - does not have employee number",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "GET",
+				RequestURI: "/vacation",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+					},
+				},
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
+		},
+		{
+			name:       "employee example - list vacations - has employee number",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "GET",
+				RequestURI: "/vacation",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+					},
+				},
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "employee example - update employee - not founder",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "PATCH",
+				RequestURI: "/vacation/john.doe",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+					},
+				},
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
+		},
+		{
+			name:       "employee example - change employee vacation - founder",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "PATCH",
+				RequestURI: "/vacation/john.doe",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjF9." +
+							"to5t1R1URIqX0q2CoI0pms5AXb77LYG0RqdrMH44XvM",
+					},
+				},
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "employee example - get salary - has employee number",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "GET",
+				RequestURI: "/salary",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+					},
+				},
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "employee example - change salary - has employee number, not human resources",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "PATCH",
+				RequestURI: "/salary/john.doe",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+					},
+				},
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusForbidden,
+		},
+		{
+			name:       "employee example - change salary - has employee number, human resources",
+			configYaml: employeeCfg,
+			request: &http.Request{
+				Method:     "PATCH",
+				RequestURI: "/salary/john.doe",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer " +
+							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXI" +
+							"iOjI1LCJkZXBhcnRtZW50IjoiSHVtYW5SZXNvdXJjZXMifQ." +
+							"eI5xxQmYalG6B1Iae-fvLY2j3YzltF7mx-pVAxR8bLY",
+					},
+				},
+			},
+			wantUpstreamCalled: true,
+			wantStatusCode:     0,
+		},
+		{
+			name:       "user example - register user",
 			configYaml: userCfg,
 			request: &http.Request{
 				Method:     "POST",
@@ -302,7 +491,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     0,
 		},
 		{
-			name:       "list users without token",
+			name:       "user example - list users without token",
 			configYaml: userCfg,
 			request: &http.Request{
 				Method:     "GET",
@@ -312,7 +501,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
-			name:       "list users with token",
+			name:       "user example - list users with token",
 			configYaml: userCfg,
 			request: &http.Request{
 				Method:     "GET",
@@ -330,7 +519,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     0,
 		},
 		{
-			name:       "delete user without permission",
+			name:       "user example - delete user without permission",
 			configYaml: userCfg,
 			request: &http.Request{
 				Method:     "DELETE",
@@ -348,7 +537,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			wantStatusCode:     http.StatusForbidden,
 		},
 		{
-			name:       "delete user with permission",
+			name:       "user example - delete user with permission",
 			configYaml: userCfg,
 			request: &http.Request{
 				Method:     "DELETE",

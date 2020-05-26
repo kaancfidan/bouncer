@@ -29,8 +29,8 @@ func NewRouteMatcher(routePolicies []models.RoutePolicy) *RouteMatcherImpl {
 func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]models.RoutePolicy, error) {
 	matches := make([]models.RoutePolicy, 0)
 	for _, rp := range g.routePolicies {
-		normalizedPath := strings.Trim(path, " \t\n/")
-		normalizedPolicyPath := strings.Trim(rp.Path, " \t\n/")
+		normalizedPath := "/" + strings.Trim(path, " \t\n/") + "/"
+		normalizedPolicyPath := "/" + strings.Trim(rp.Path, " \t\n/") + "/"
 
 		g, err := glob.Compile(normalizedPolicyPath, '/')
 		if err != nil {
