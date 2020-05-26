@@ -52,8 +52,6 @@ func Test_Server_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
-
-				authorizer.On("IsAnonymousAllowed", matchedRoutes).Return(true)
 			},
 			wantUpstreamCalled: true,
 			wantStatusCode:     0,
@@ -75,8 +73,6 @@ func Test_Server_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
-
-				authorizer.On("IsAnonymousAllowed", matchedRoutes).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)
@@ -104,8 +100,6 @@ func Test_Server_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
-
-				authorizer.On("IsAnonymousAllowed", matchedRoutes).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(nil, fmt.Errorf("the guy is an imposter"))
@@ -135,8 +129,6 @@ func Test_Server_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
-
-				authorizer.On("IsAnonymousAllowed", matchedRoutes).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)
@@ -173,8 +165,6 @@ func Test_Server_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
-
-				authorizer.On("IsAnonymousAllowed", matchedRoutes).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)

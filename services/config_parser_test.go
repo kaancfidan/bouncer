@@ -23,7 +23,8 @@ func Test_YamlConfigParser_ParseConfig(t *testing.T) {
 		},
 		{
 			name: "empty config",
-			yaml: "claimPolicies: {}\nroutePolicies: []",
+			yaml: "claimPolicies: {}\n" +
+				"routePolicies: []",
 			want: &models.Config{
 				ClaimPolicies: map[string][]models.ClaimRequirement{},
 				RoutePolicies: []models.RoutePolicy{},
@@ -38,7 +39,10 @@ func Test_YamlConfigParser_ParseConfig(t *testing.T) {
 		},
 		{
 			name: "claim policies deserialize",
-			yaml: "claimPolicies:\n TestPolicy:\n  - claim: test\n    values: [1,2,3]",
+			yaml: "claimPolicies:\n" +
+				" TestPolicy:\n" +
+				"  - claim: test\n" +
+				"    values: [1,2,3]",
 			want: &models.Config{
 				ClaimPolicies: map[string][]models.ClaimRequirement{
 					"TestPolicy": {
@@ -53,10 +57,37 @@ func Test_YamlConfigParser_ParseConfig(t *testing.T) {
 		},
 		{
 			name: "route policies deserialize",
-			yaml: "routePolicies:\n - path: /test\n   methods: [GET, POST]\n   policyName: TestPolicy\n   allowAnonymous: true",
+			yaml: "routePolicies:\n" +
+				" - path: /test\n" +
+				"   methods: [GET, POST]\n" +
+				"   policyName: TestPolicy\n" +
+				"   allowAnonymous: true",
 			want: &models.Config{
 				RoutePolicies: []models.RoutePolicy{
 					{Path: "/test", Methods: []string{"GET", "POST"}, PolicyName: "TestPolicy", AllowAnonymous: true},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "sorts route policies by specifity",
+			yaml: "routePolicies:\n" +
+				" - path: /**\n" +
+				" - path: /test/*/\n" +
+				" - path: /test/this\n" +
+				" - path: /test/**\n" +
+				" - path: /test/this/and/that\n" +
+				" - path: /test/**/that\n" +
+				" - path: /test",
+			want: &models.Config{
+				RoutePolicies: []models.RoutePolicy{
+					{Path: "/test/this/and/that"},
+					{Path: "/test/**/that"},
+					{Path: "/test/this"},
+					{Path: "/test/*/"},
+					{Path: "/test/**"},
+					{Path: "/test"},
+					{Path: "/**"},
 				},
 			},
 			wantErr: false,
