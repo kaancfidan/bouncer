@@ -24,8 +24,11 @@ jobs:
     - name: Test and cover
       run: |
         CVPKG=$(go list ./... | grep -v -e "mocks" | tr '\n' ',')
-        go test ./... -bench -race -coverpkg $CVPKG -coverprofile coverage.txt -covermode atomic
+        go test ./... -race -coverpkg $CVPKG -coverprofile coverage.txt -covermode atomic
         go tool cover -func coverage.txt
+
+    - name: Benchmark
+      run: go test -bench Server_Proxy -run ^$ services/server_test.go
 
     - name: Publish coverage
       run: bash <(curl -s https://codecov.io/bash)

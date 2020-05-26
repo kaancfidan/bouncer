@@ -7,7 +7,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_AuthorizerImpl_Authorize(t *testing.T) {
+func TestAuthorizerImpl_Authorize(t *testing.T) {
 	type args struct {
 		policyNames []string
 		claims      map[string]interface{}

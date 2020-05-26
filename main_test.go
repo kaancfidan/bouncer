@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_newServer(t *testing.T) {
+func TestnewServer(t *testing.T) {
 	tests := []struct {
 		name       string
 		flags      *flags

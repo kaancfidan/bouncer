@@ -17,7 +17,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_Server_Proxy(t *testing.T) {
+func TestServer_Proxy(t *testing.T) {
 	tests := []struct {
 		name               string
 		expectations       func(*http.Request, *mocks.RouteMatcher, *mocks.Authenticator, *mocks.Authorizer)
@@ -233,7 +233,7 @@ func Test_Server_Proxy(t *testing.T) {
 	}
 }
 
-func Test_Server_Proxy_Integration(t *testing.T) {
+func TestServer_Proxy_Integration(t *testing.T) {
 	userCfg := "claimPolicies:\n" +
 		" CanDeleteUsers:\n" +
 		"  - claim: permission\n" +
@@ -593,7 +593,7 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 	}
 }
 
-func Benchmark_Server_Proxy(b *testing.B) {
+func BenchmarkServer_Proxy(b *testing.B) {
 	log.SetOutput(ioutil.Discard)
 	defer log.SetOutput(os.Stdout)
 
