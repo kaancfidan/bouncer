@@ -250,6 +250,9 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 		" - path: /**\n" +
 		"   allowAnonymous: true\n" +
 		" - path: /destroy/server\n" +
+		"   allowAnonymous: false\n" +
+		" - path: /**\n" +
+		"   methods: [DELETE]\n" +
 		"   allowAnonymous: false\n"
 
 	employeeCfg := "claimPolicies:\n" +
@@ -301,6 +304,16 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 			request: &http.Request{
 				Method:     "POST",
 				RequestURI: "/destroy/server",
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
+		},
+		{
+			name:       "anon example - delete - anonymous",
+			configYaml: defaultAnonCfg,
+			request: &http.Request{
+				Method:     "DELETE",
+				RequestURI: "/something",
 			},
 			wantUpstreamCalled: false,
 			wantStatusCode:     http.StatusUnauthorized,
