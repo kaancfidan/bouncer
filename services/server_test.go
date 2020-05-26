@@ -679,8 +679,8 @@ func Benchmark_Server_Proxy(b *testing.B) {
 				Header: map[string][]string{
 					"Authorization": {
 						"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiIsInBlcm1pc3Npb24iOlsiR2V0IiwiUnVuIiwiSnVtcCIsIkVhdCIsIlNsZWVwIl19." +
-							"hCOupfa-L6Ve4DkFz5oNS_OWGtoOO_nc-O-jFbybROc",
+							"eyJuYW1lIjoiSm9obiIsInBlcm1pc3Npb24iOlsiQ3JlYXRlIiwiUmVhZCIsIlVwZGF0ZSIsIkRlbGV0ZSJdfQ." +
+							"3Qev2YmWb9IIV2Xe_Yy2fxp6_TBTcWDt8gD19FHN5uY",
 					},
 				},
 			},
