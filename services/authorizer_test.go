@@ -89,7 +89,7 @@ func Test_AuthorizerImpl_Authorize(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name: "claim value matches",
+			name: "claim value matches - string",
 			claimPolicies: map[string][]models.ClaimRequirement{
 				"NamedJohn": {
 					models.ClaimRequirement{
@@ -102,6 +102,44 @@ func Test_AuthorizerImpl_Authorize(t *testing.T) {
 				policyNames: []string{"NamedJohn"},
 				claims: map[string]interface{}{
 					"name": "John",
+				},
+			},
+			wantFailedClaim: "",
+			wantErr:         false,
+		},
+		{
+			name: "claim value matches - int",
+			claimPolicies: map[string][]models.ClaimRequirement{
+				"Founder": {
+					models.ClaimRequirement{
+						Claim:  "employee_number",
+						Values: []string{"1"},
+					},
+				},
+			},
+			args: args{
+				policyNames: []string{"Founder"},
+				claims: map[string]interface{}{
+					"employee_number": 1,
+				},
+			},
+			wantFailedClaim: "",
+			wantErr:         false,
+		},
+		{
+			name: "claim value matches - bool",
+			claimPolicies: map[string][]models.ClaimRequirement{
+				"CanDoStuff": {
+					models.ClaimRequirement{
+						Claim:  "do_stuff",
+						Values: []string{"true"},
+					},
+				},
+			},
+			args: args{
+				policyNames: []string{"CanDoStuff"},
+				claims: map[string]interface{}{
+					"do_stuff": true,
 				},
 			},
 			wantFailedClaim: "",

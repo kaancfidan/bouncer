@@ -73,7 +73,7 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 			found := false
 			for _, val := range arr {
 				for _, cfgVal := range cp.Values {
-					if val == cfgVal {
+					if claimEquals(val, cfgVal) {
 						found = true
 						break
 					}
@@ -95,7 +95,7 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 		// if the matching claim is not an array, check direct equality with expectation
 		found := false
 		for _, cfgVal := range cp.Values {
-			if claims[cp.Claim] == cfgVal {
+			if claimEquals(claims[cp.Claim], cfgVal) {
 				found = true
 				break
 			}
@@ -107,6 +107,10 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 	}
 
 	return failedClaim, nil
+}
+
+func claimEquals(claim interface{}, expectation string) bool {
+	return fmt.Sprintf("%v", claim) == expectation
 }
 
 // IsAnonymousAllowed checks if the most specific policy allows anonymous access
