@@ -3,7 +3,10 @@ package services_test
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -586,6 +589,137 @@ func Test_Server_Proxy_Integration(t *testing.T) {
 
 			upstream.AssertExpectations(t)
 			responseWriter.AssertExpectations(t)
+		})
+	}
+}
+
+func Benchmark_Server_Proxy(b *testing.B) {
+	log.SetOutput(ioutil.Discard)
+	defer log.SetOutput(os.Stdout)
+
+	cfg := "claimPolicies:\n" +
+		" NamedJohn:\n" +
+		"  - claim: name\n" +
+		"    values: [John]\n" +
+		" CanDelete:\n" +
+		"  - claim: permission\n" +
+		"    values: [Delete]\n" +
+		"routePolicies:\n" +
+		" - path: /**\n" +
+		"   allowAnonymous: true\n" +
+		" - path: /john\n" +
+		"   policyName: NamedJohn\n" +
+		" - path: /test\n" +
+		"   methods: [DELETE]\n" +
+		"   policyName: CanDelete\n"
+
+	hmacKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
+
+	benchmarks := []struct {
+		name    string
+		request *http.Request
+	}{
+		{
+			name: "anonymous request",
+			request: &http.Request{
+				RequestURI: "/",
+				Method:     "GET",
+			},
+		},
+		{
+			name: "no token authentication fail",
+			request: &http.Request{
+				RequestURI: "/",
+				Method:     "DELETE",
+			},
+		},
+		{
+			name: "invalid token authentication fail",
+			request: &http.Request{
+				RequestURI: "/",
+				Method:     "DELETE",
+				Header: map[string][]string{
+					"Authorization": {"Bearer invalid"},
+				},
+			},
+		},
+		{
+			name: "authenticated - no authorization policy",
+			request: &http.Request{
+				RequestURI: "/test",
+				Method:     "GET",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiJ9." +
+							"RrGFP4amlb2A4f7k73sUqtquV5GHsfRhtOTGmWS3uQY",
+					},
+				},
+			},
+		},
+		{
+			name: "authenticated - authorized (value claim)",
+			request: &http.Request{
+				RequestURI: "/john",
+				Method:     "GET",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiJ9." +
+							"RrGFP4amlb2A4f7k73sUqtquV5GHsfRhtOTGmWS3uQY",
+					},
+				},
+			},
+		},
+		{
+			name: "authenticated - authorized (array claim)",
+			request: &http.Request{
+				RequestURI: "/test",
+				Method:     "DELETE",
+				Header: map[string][]string{
+					"Authorization": {
+						"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+							"eyJuYW1lIjoiSm9obiIsInBlcm1pc3Npb24iOlsiR2V0IiwiUnVuIiwiSnVtcCIsIkVhdCIsIlNsZWVwIl19." +
+							"hCOupfa-L6Ve4DkFz5oNS_OWGtoOO_nc-O-jFbybROc",
+					},
+				},
+			},
+		},
+	}
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			buf := bytes.Buffer{}
+			buf.WriteString(cfg)
+
+			cfg, err := services.YamlConfigParser{}.ParseConfig(&buf)
+			assert.Nil(b, err)
+
+			err = services.ValidateConfig(cfg)
+			assert.Nil(b, err)
+
+			header := http.Header{}
+
+			upstream := &mocks.Handler{}
+			responseWriter := &mocks.ResponseWriter{}
+
+			routeMatcher := services.NewRouteMatcher(cfg.RoutePolicies)
+			authorizer := services.NewAuthorizer(cfg.ClaimPolicies)
+			authenticator := services.NewAuthenticator(hmacKey)
+
+			s := services.Server{
+				Upstream:      upstream,
+				RouteMatcher:  routeMatcher,
+				Authorizer:    authorizer,
+				Authenticator: authenticator,
+			}
+
+			upstream.On("ServeHTTP", mock.Anything, mock.Anything).Return()
+			responseWriter.On("WriteHeader", mock.Anything).Return()
+			responseWriter.On("Header").Return(header)
+
+			for i := 0; i < b.N; i++ {
+				s.Proxy(responseWriter, bm.request)
+			}
 		})
 	}
 }
