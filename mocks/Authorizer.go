@@ -31,13 +31,13 @@ func (_m *Authorizer) Authorize(policyNames []string, claims map[string]interfac
 	return r0, r1
 }
 
-// IsAnonymousAllowed provides a mock function with given fields: matchedPolicies
-func (_m *Authorizer) IsAnonymousAllowed(matchedPolicies []models.RoutePolicy) bool {
-	ret := _m.Called(matchedPolicies)
+// IsAnonymousAllowed provides a mock function with given fields: matchedPolicies, method
+func (_m *Authorizer) IsAnonymousAllowed(matchedPolicies []models.RoutePolicy, method string) bool {
+	ret := _m.Called(matchedPolicies, method)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func([]models.RoutePolicy) bool); ok {
-		r0 = rf(matchedPolicies)
+	if rf, ok := ret.Get(0).(func([]models.RoutePolicy, string) bool); ok {
+		r0 = rf(matchedPolicies, method)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
