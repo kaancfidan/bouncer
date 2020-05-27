@@ -55,6 +55,8 @@ func TestServer_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(true)
 			},
 			wantUpstreamCalled: true,
 			wantStatusCode:     0,
@@ -76,6 +78,8 @@ func TestServer_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)
@@ -103,6 +107,8 @@ func TestServer_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(nil, fmt.Errorf("the guy is an imposter"))
@@ -132,6 +138,8 @@ func TestServer_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)
@@ -168,6 +176,8 @@ func TestServer_Proxy(t *testing.T) {
 
 				routeMatcher.On("MatchRoutePolicies",
 					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
 				authenticator.On("Authenticate",
 					mock.Anything).Return(claims, nil)
@@ -233,25 +243,14 @@ func TestServer_Proxy(t *testing.T) {
 	}
 }
 
-func TestServer_Proxy_Integration(t *testing.T) {
-	userCfg := "claimPolicies:\n" +
-		" CanDeleteUsers:\n" +
-		"  - claim: permission\n" +
-		"    values: [DeleteUser]\n" +
-		"routePolicies:\n" +
-		" - path: /users/*\n" +
-		"   methods: [DELETE]\n" +
-		"   policyName: CanDeleteUsers\n" +
-		" - path: /users/register\n" +
-		"   methods: [POST]\n" +
-		"   allowAnonymous: true\n" +
-		" - path: /users\n" +
-		"   methods: [GET]"
-
+func TestIntegration(t *testing.T) {
 	defaultAnonCfg := "claimPolicies: {}\n" +
 		"routePolicies:\n" +
 		" - path: /**\n" +
 		"   allowAnonymous: true\n" +
+		" - path: /**\n" +
+		"   methods: [DELETE]\n" +
+		"   allowAnonymous: false\n" +
 		" - path: /destroy/server\n" +
 		"   allowAnonymous: false\n"
 
@@ -279,6 +278,18 @@ func TestServer_Proxy_Integration(t *testing.T) {
 		"   methods: [PUT, PATCH]\n" +
 		"   policyName: HumanResources"
 
+	userCfg := "claimPolicies:\n" +
+		" CanDeleteUsers:\n" +
+		"  - claim: permission\n" +
+		"    values: [DeleteUser]\n" +
+		"routePolicies:\n" +
+		" - path: /users/*\n" +
+		"   methods: [DELETE]\n" +
+		"   policyName: CanDeleteUsers\n" +
+		" - path: /users/register\n" +
+		"   methods: [POST]\n" +
+		"   allowAnonymous: true\n"
+
 	hmacKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
 
 	tests := []struct {
@@ -304,6 +315,16 @@ func TestServer_Proxy_Integration(t *testing.T) {
 			request: &http.Request{
 				Method:     "POST",
 				RequestURI: "/destroy/server",
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusUnauthorized,
+		},
+		{
+			name:       "anon example - delete - anonymous",
+			configYaml: defaultAnonCfg,
+			request: &http.Request{
+				Method:     "DELETE",
+				RequestURI: "/something",
 			},
 			wantUpstreamCalled: false,
 			wantStatusCode:     http.StatusUnauthorized,

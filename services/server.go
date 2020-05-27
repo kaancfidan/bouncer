@@ -40,7 +40,7 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("[%v] Policies matched: %v", requestID, matchedPolicyNames)
 
 	// check if the most specific route allows anonymous requests
-	if len(matchedPolicies) > 0 && matchedPolicies[0].AllowAnonymous {
+	if s.Authorizer.IsAnonymousAllowed(matchedPolicies, request.Method) {
 		log.Printf("[%v] Allowed anonymous request.", requestID)
 		s.Upstream.ServeHTTP(writer, request)
 		return
