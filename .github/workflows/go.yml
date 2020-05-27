@@ -1,10 +1,7 @@
 name: Go
-
 on: [push, pull_request]
-
 jobs:
-
-  build:
+  build and test:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -27,8 +24,37 @@ jobs:
         go test ./... -race -coverpkg $CVPKG -coverprofile coverage.txt -covermode atomic
         go tool cover -func coverage.txt
 
-    - name: Benchmark
-      run: go test -bench Server_Proxy -run ^$ services/server_test.go
-
     - name: Publish coverage
       run: bash <(curl -s https://codecov.io/bash)
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@master
+        with:
+          go-version: ^1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@master
+
+      - name: Benchmark
+        run: go test -bench . -run ^$ ./services/ | tee bench.out
+
+      - name: Download previous benchmark data
+        uses: actions/cache@v1
+        with:
+          path: ./cache
+          key: ${{ runner.os }}-benchmark
+
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@v1
+        with:
+          tool: 'go'
+          output-file-path: bench.out
+          external-data-json-path: ./cache/benchmark-data.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-on-alert: true

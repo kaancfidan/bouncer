@@ -614,7 +614,7 @@ func TestIntegration(t *testing.T) {
 	}
 }
 
-func BenchmarkServer_Proxy(b *testing.B) {
+func BenchmarkIntegration(b *testing.B) {
 	log.SetOutput(ioutil.Discard)
 	defer log.SetOutput(os.Stdout)
 
