@@ -7,7 +7,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_AuthorizerImpl_Authorize(t *testing.T) {
+func TestAuthorizerImpl_Authorize(t *testing.T) {
 	type args struct {
 		policyNames []string
 		claims      map[string]interface{}
@@ -302,6 +302,95 @@ func Test_AuthorizerImpl_Authorize(t *testing.T) {
 
 			if gotFailedPolicy != tt.wantFailedClaim {
 				t.Errorf("Authorize() = %v, want %v", gotFailedPolicy, tt.wantFailedClaim)
+			}
+		})
+	}
+}
+
+func TestAuthorizerImpl_IsAnonymousAllowed(t *testing.T) {
+	tests := []struct {
+		name            string
+		matchedPolicies []models.RoutePolicy
+		method          string
+		want            bool
+	}{
+		{
+			name:            "no matching policies",
+			matchedPolicies: []models.RoutePolicy{},
+			method:          "GET",
+			want:            false,
+		},
+		{
+			name: "single matching policy - not allowed",
+			matchedPolicies: []models.RoutePolicy{
+				{AllowAnonymous: false},
+			},
+			method: "GET",
+			want:   false,
+		},
+		{
+			name: "single matching policy - allowed",
+			matchedPolicies: []models.RoutePolicy{
+				{AllowAnonymous: true},
+			},
+			method: "GET",
+			want:   true,
+		},
+		{
+			name: "multiple matching policy - different specifity",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/test",
+					AllowAnonymous: false,
+				},
+				{
+					Path:           "/**",
+					AllowAnonymous: true,
+				},
+			},
+			method: "GET",
+			want:   false,
+		},
+		{
+			name: "multiple matching policy - same specifity - first match is correct",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/test",
+					Methods:        []string{"GET"},
+					AllowAnonymous: true,
+				},
+				{
+					Path:           "/test",
+					Methods:        []string{"POST", "PUT"},
+					AllowAnonymous: false,
+				},
+			},
+			method: "GET",
+			want:   true,
+		},
+		{
+			name: "multiple matching policy - same specifity - changes with method",
+			matchedPolicies: []models.RoutePolicy{
+				{
+					Path:           "/test",
+					Methods:        []string{"POST", "PUT"},
+					AllowAnonymous: false,
+				},
+				{
+					Path:           "/test",
+					Methods:        []string{"GET"},
+					AllowAnonymous: true,
+				},
+			},
+			method: "GET",
+			want:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := services.AuthorizerImpl{}
+			if got := a.IsAnonymousAllowed(tt.matchedPolicies, tt.method); got != tt.want {
+				t.Errorf("IsAnonymousAllowed() = %v, want %v", got, tt.want)
 			}
 		})
 	}

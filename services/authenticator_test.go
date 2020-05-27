@@ -7,7 +7,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_AuthenticatorImpl_Authenticate(t *testing.T) {
+func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 	tests := []struct {
 		name       string
 		hmacKey    []byte

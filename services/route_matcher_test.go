@@ -8,7 +8,7 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func Test_RouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
+func TestRouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 	tests := []struct {
 		name          string
 		routePolicies []models.RoutePolicy

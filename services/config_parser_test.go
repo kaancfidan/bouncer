@@ -8,7 +8,7 @@ import (
 	"github.com/kaancfidan/bouncer/models"
 )
 
-func Test_YamlConfigParser_ParseConfig(t *testing.T) {
+func TestYamlConfigParser_ParseConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		yaml    string
@@ -113,7 +113,7 @@ func Test_YamlConfigParser_ParseConfig(t *testing.T) {
 	}
 }
 
-func Test_ValidateConfig(t *testing.T) {
+func TestValidateConfig(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  *models.Config
