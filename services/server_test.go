@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,15 +15,17 @@ import (
 	"github.com/kaancfidan/bouncer/services"
 )
 
-func TestServer_Proxy(t *testing.T) {
+func TestServer_Handle(t *testing.T) {
 	tests := []struct {
 		name               string
+		proxyEnabled       bool
 		expectations       func(*http.Request, *mocks.RouteMatcher, *mocks.Authenticator, *mocks.Authorizer)
 		wantUpstreamCalled bool
 		wantStatusCode     int
 	}{
 		{
-			name: "route matching failed",
+			name:         "route matching failed",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -30,13 +33,14 @@ func TestServer_Proxy(t *testing.T) {
 				authorizer *mocks.Authorizer) {
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(nil, fmt.Errorf("path error"))
+					request.URL.Path, request.Method).Return(nil, fmt.Errorf("path error"))
 			},
 			wantUpstreamCalled: false,
 			wantStatusCode:     http.StatusInternalServerError,
 		},
 		{
-			name: "allow anonymous",
+			name:         "allow anonymous",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -51,7 +55,31 @@ func TestServer_Proxy(t *testing.T) {
 				}
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(true)
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusOK,
+		},
+		{
+			name:         "proxy enabled, allow anonymous",
+			proxyEnabled: true,
+			expectations: func(
+				request *http.Request,
+				routeMatcher *mocks.RouteMatcher,
+				authenticator *mocks.Authenticator,
+				authorizer *mocks.Authorizer) {
+
+				matchedRoutes := []models.RoutePolicy{
+					{
+						Path:           "/",
+						AllowAnonymous: true,
+					},
+				}
+
+				routeMatcher.On("MatchRoutePolicies",
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
 
 				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(true)
 			},
@@ -59,7 +87,8 @@ func TestServer_Proxy(t *testing.T) {
 			wantStatusCode:     0,
 		},
 		{
-			name: "authentication - success, authorization - success",
+			name:         "authentication - success, authorization - success",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -74,7 +103,41 @@ func TestServer_Proxy(t *testing.T) {
 				}
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
+
+				authenticator.On("Authenticate",
+					mock.Anything).Return(claims, nil)
+
+				authorizer.On("Authorize",
+					mock.MatchedBy(
+						func(policyNames []string) bool {
+							return len(policyNames) == 0
+						}),
+					claims).Return("", nil)
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusOK,
+		},
+		{
+			name:         "proxy enabled, authentication - success, authorization - success",
+			proxyEnabled: true,
+			expectations: func(
+				request *http.Request,
+				routeMatcher *mocks.RouteMatcher,
+				authenticator *mocks.Authenticator,
+				authorizer *mocks.Authorizer) {
+
+				// no route policy matched
+				matchedRoutes := make([]models.RoutePolicy, 0)
+
+				claims := map[string]interface{}{
+					"claim": "value",
+				}
+
+				routeMatcher.On("MatchRoutePolicies",
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
 
 				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
@@ -92,7 +155,8 @@ func TestServer_Proxy(t *testing.T) {
 			wantStatusCode:     0,
 		},
 		{
-			name: "authentication - failed",
+			name:         "authentication - failed",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -103,7 +167,7 @@ func TestServer_Proxy(t *testing.T) {
 				matchedRoutes := make([]models.RoutePolicy, 0)
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
 
 				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
@@ -114,7 +178,8 @@ func TestServer_Proxy(t *testing.T) {
 			wantStatusCode:     http.StatusUnauthorized,
 		},
 		{
-			name: "authentication - success, authorization - failed",
+			name:         "authentication - success, authorization - failed",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -134,7 +199,7 @@ func TestServer_Proxy(t *testing.T) {
 				}
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
 
 				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
@@ -152,7 +217,8 @@ func TestServer_Proxy(t *testing.T) {
 			wantStatusCode:     http.StatusForbidden,
 		},
 		{
-			name: "error while authorization",
+			name:         "error while authorization",
+			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
 				routeMatcher *mocks.RouteMatcher,
@@ -172,7 +238,7 @@ func TestServer_Proxy(t *testing.T) {
 				}
 
 				routeMatcher.On("MatchRoutePolicies",
-					request.RequestURI, request.Method).Return(matchedRoutes, nil)
+					request.URL.Path, request.Method).Return(matchedRoutes, nil)
 
 				authorizer.On("IsAnonymousAllowed", matchedRoutes, request.Method).Return(false)
 
@@ -194,24 +260,25 @@ func TestServer_Proxy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			header := http.Header{}
 
-			request := &http.Request{
-				Method:     "GET",
-				RequestURI: "/",
+			request, err := http.NewRequest("GET", "/", nil)
+			assert.Nil(t, err)
+
+			var upstream *mocks.Handler
+			if tt.proxyEnabled {
+				upstream = &mocks.Handler{}
 			}
 
-			upstream := &mocks.Handler{}
 			responseWriter := &mocks.ResponseWriter{}
 
 			routeMatcher := &mocks.RouteMatcher{}
 			authenticator := &mocks.Authenticator{}
 			authorizer := &mocks.Authorizer{}
 
-			s := services.Server{
-				Upstream:      upstream,
-				RouteMatcher:  routeMatcher,
-				Authorizer:    authorizer,
-				Authenticator: authenticator,
-			}
+			s := services.NewServer(
+				upstream,
+				routeMatcher,
+				authorizer,
+				authenticator)
 
 			tt.expectations(request, routeMatcher, authenticator, authorizer)
 
@@ -225,13 +292,16 @@ func TestServer_Proxy(t *testing.T) {
 				}
 			}
 
-			s.Proxy(responseWriter, request)
+			s.Handle(responseWriter, request)
 
 			if tt.wantStatusCode == http.StatusUnauthorized {
 				assert.Equal(t, "Bearer", header["Www-Authenticate"][0])
 			}
 
-			upstream.AssertExpectations(t)
+			if tt.proxyEnabled {
+				upstream.AssertExpectations(t)
+			}
+
 			responseWriter.AssertExpectations(t)
 			routeMatcher.AssertExpectations(t)
 			authenticator.AssertExpectations(t)
@@ -290,280 +360,183 @@ func TestIntegration(t *testing.T) {
 	hmacKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
 
 	tests := []struct {
-		name               string
-		configYaml         string
-		request            *http.Request
-		wantUpstreamCalled bool
-		wantStatusCode     int
+		name           string
+		configYaml     string
+		method         string
+		path           string
+		authHeader     string
+		wantStatusCode int
 	}{
 		{
-			name:       "anon example - do stuff - anonymous",
-			configYaml: defaultAnonCfg,
-			request: &http.Request{
-				Method:     "POST",
-				RequestURI: "/do/some/stuff",
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			name:           "anon example - do stuff - anonymous",
+			configYaml:     defaultAnonCfg,
+			method:         "POST",
+			path:           "/do/some/stuff",
+			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:       "anon example - destroy server - anonymous",
-			configYaml: defaultAnonCfg,
-			request: &http.Request{
-				Method:     "POST",
-				RequestURI: "/destroy/server",
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusUnauthorized,
+			name:           "anon example - destroy server - anonymous",
+			configYaml:     defaultAnonCfg,
+			method:         "POST",
+			path:           "/destroy/server",
+			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
-			name:       "anon example - delete - anonymous",
-			configYaml: defaultAnonCfg,
-			request: &http.Request{
-				Method:     "DELETE",
-				RequestURI: "/something",
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusUnauthorized,
+			name:           "anon example - delete - anonymous",
+			configYaml:     defaultAnonCfg,
+			method:         "DELETE",
+			path:           "/something",
+			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
 			name:       "anon example - destroy server - authenticated",
 			configYaml: defaultAnonCfg,
-			request: &http.Request{
-				Method:     "POST",
-				RequestURI: "/destroy/server",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "POST",
+			path:       "/destroy/server",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:       "employee example - vacation policy - anonymous",
-			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/vacation/policy",
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			name:           "employee example - vacation policy - anonymous",
+			configYaml:     employeeCfg,
+			method:         "GET",
+			path:           "/vacation/policy",
+			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:       "employee example - list vacations - unauthenticated",
-			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/vacation",
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusUnauthorized,
+			name:           "employee example - list vacations - unauthenticated",
+			configYaml:     employeeCfg,
+			method:         "GET",
+			path:           "/vacation",
+			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
 			name:       "employee example - list vacations - does not have employee number",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/vacation",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
-					},
-				},
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusForbidden,
+			method:     "GET",
+			path:       "/vacation",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name:       "employee example - list vacations - has employee number",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/vacation",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "GET",
+			path:       "/vacation",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			wantStatusCode: http.StatusOK,
 		},
 		{
 			name:       "employee example - update employee - not founder",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "PATCH",
-				RequestURI: "/vacation/john.doe",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
-					},
-				},
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusForbidden,
+			method:     "PATCH",
+			path:       "/vacation/john.doe",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name:       "employee example - change employee vacation - founder",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "PATCH",
-				RequestURI: "/vacation/john.doe",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjF9." +
-							"to5t1R1URIqX0q2CoI0pms5AXb77LYG0RqdrMH44XvM",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "PATCH",
+			path:       "/vacation/john.doe",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjF9." +
+				"to5t1R1URIqX0q2CoI0pms5AXb77LYG0RqdrMH44XvM",
+			wantStatusCode: http.StatusOK,
 		},
 		{
 			name:       "employee example - get salary - has employee number",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/salary",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "GET",
+			path:       "/salary",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			wantStatusCode: http.StatusOK,
 		},
 		{
 			name:       "employee example - change salary - has employee number, not human resources",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "PATCH",
-				RequestURI: "/salary/john.doe",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-							"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
-					},
-				},
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusForbidden,
+			method:     "PATCH",
+			path:       "/salary/john.doe",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name:       "employee example - change salary - has employee number, human resources",
 			configYaml: employeeCfg,
-			request: &http.Request{
-				Method:     "PATCH",
-				RequestURI: "/salary/john.doe",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXI" +
-							"iOjI1LCJkZXBhcnRtZW50IjoiSHVtYW5SZXNvdXJjZXMifQ." +
-							"eI5xxQmYalG6B1Iae-fvLY2j3YzltF7mx-pVAxR8bLY",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "PATCH",
+			path:       "/salary/john.doe",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXI" +
+				"iOjI1LCJkZXBhcnRtZW50IjoiSHVtYW5SZXNvdXJjZXMifQ." +
+				"eI5xxQmYalG6B1Iae-fvLY2j3YzltF7mx-pVAxR8bLY",
+			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:       "user example - register user",
-			configYaml: userCfg,
-			request: &http.Request{
-				Method:     "POST",
-				RequestURI: "/users/register",
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			name:           "user example - register user",
+			configYaml:     userCfg,
+			method:         "POST",
+			path:           "/users/register",
+			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:       "user example - list users without token",
-			configYaml: userCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/users",
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusUnauthorized,
+			name:           "user example - list users without token",
+			configYaml:     userCfg,
+			method:         "GET",
+			path:           "/users",
+			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
 			name:       "user example - list users with token",
 			configYaml: userCfg,
-			request: &http.Request{
-				Method:     "GET",
-				RequestURI: "/users",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "GET",
+			path:       "/users",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			wantStatusCode: http.StatusOK,
 		},
 		{
 			name:       "user example - delete user without permission",
 			configYaml: userCfg,
-			request: &http.Request{
-				Method:     "DELETE",
-				RequestURI: "/users/kaancfidan",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-							"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
-					},
-				},
-			},
-			wantUpstreamCalled: false,
-			wantStatusCode:     http.StatusForbidden,
+			method:     "DELETE",
+			path:       "/users/kaancfidan",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name:       "user example - delete user with permission",
 			configYaml: userCfg,
-			request: &http.Request{
-				Method:     "DELETE",
-				RequestURI: "/users/kaancfidan",
-				Header: map[string][]string{
-					"Authorization": {
-						"Bearer " +
-							"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-							"eyJuYW1lIjoiSm9obiBEb2UiLCJwZXJtaXNzaW9uIjoiRGVsZXRlVXNlciJ9." +
-							"UfayhfqkDaLcCIr1MGU6nGpv3q5DU6lyQKt2HtwFUs0",
-					},
-				},
-			},
-			wantUpstreamCalled: true,
-			wantStatusCode:     0,
+			method:     "DELETE",
+			path:       "/users/kaancfidan",
+			authHeader: "Bearer " +
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+				"eyJuYW1lIjoiSm9obiBEb2UiLCJwZXJtaXNzaW9uIjoiRGVsZXRlVXNlciJ9." +
+				"UfayhfqkDaLcCIr1MGU6nGpv3q5DU6lyQKt2HtwFUs0",
+			wantStatusCode: http.StatusOK,
 		},
 	}
 	for _, tt := range tests {
@@ -577,36 +550,29 @@ func TestIntegration(t *testing.T) {
 			err = services.ValidateConfig(cfg)
 			assert.Nil(t, err)
 
-			header := http.Header{}
-
-			upstream := &mocks.Handler{}
-			responseWriter := &mocks.ResponseWriter{}
-
 			routeMatcher := services.NewRouteMatcher(cfg.RoutePolicies)
 			authorizer := services.NewAuthorizer(cfg.ClaimPolicies)
 			authenticator := services.NewAuthenticator(hmacKey)
 
-			s := services.Server{
-				Upstream:      upstream,
-				RouteMatcher:  routeMatcher,
-				Authorizer:    authorizer,
-				Authenticator: authenticator,
+			s := services.NewServer(
+				nil,
+				routeMatcher,
+				authorizer,
+				authenticator)
+
+			req, err := http.NewRequest(tt.method, tt.path, nil)
+			assert.Nil(t, err)
+			req.Header.Add("Authorization", tt.authHeader)
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(s.Handle)
+
+			handler.ServeHTTP(rr, req)
+
+			if got := rr.Code; got != tt.wantStatusCode {
+				t.Errorf("Handle returned wrong status code: got %v want %v",
+					got, tt.wantStatusCode)
 			}
-
-			if tt.wantUpstreamCalled {
-				upstream.On("ServeHTTP", responseWriter, tt.request).Return()
-			} else {
-				responseWriter.On("WriteHeader", tt.wantStatusCode).Return()
-
-				if tt.wantStatusCode == http.StatusUnauthorized {
-					responseWriter.On("Header").Return(header)
-				}
-			}
-
-			s.Proxy(responseWriter, tt.request)
-
-			upstream.AssertExpectations(t)
-			responseWriter.AssertExpectations(t)
 		})
 	}
 }
