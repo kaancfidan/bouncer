@@ -31,6 +31,14 @@ func TestNewServer(t *testing.T) {
 			wantErr:    true,
 		},
 		{
+			name: "auth server without proxy",
+			flags: &flags{
+				hmacKey: "SuperSecretKey123!",
+			},
+			cfgContent: "claimPolicies: {}\nroutePolicies: []",
+			wantErr:    false,
+		},
+		{
 			name: "invalid url scheme",
 			flags: &flags{
 				hmacKey:     "SuperSecretKey123!",
@@ -47,14 +55,6 @@ func TestNewServer(t *testing.T) {
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,
-		},
-		{
-			name: "no signing key still creates server",
-			flags: &flags{
-				upstreamURL: "http://localhost:8080",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    false,
 		},
 		{
 			name: "invalid config yaml",

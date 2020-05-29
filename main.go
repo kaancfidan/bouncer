@@ -36,7 +36,7 @@ func main() {
 		log.Fatalf("server could not be created: %v", err)
 	}
 
-	http.HandleFunc("/", server.Proxy)
+	http.HandleFunc("/", server.Handle)
 
 	log.Printf("Bouncer[%s] started.", version)
 	defer log.Printf("Bouncer shut down.")
@@ -46,14 +46,20 @@ func main() {
 }
 
 func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
-	// parse upstream URL
-	parsedURL, err := url.Parse(f.upstreamURL)
-	if err != nil {
-		return nil, fmt.Errorf("upstream url could not be parsed: %w", err)
-	}
+	var upstream http.Handler
 
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return nil, fmt.Errorf("upstream url scheme must be http or https")
+	if f.upstreamURL != "" {
+		// parse upstream URL
+		parsedURL, err := url.Parse(f.upstreamURL)
+		if err != nil {
+			return nil, fmt.Errorf("upstream url could not be parsed: %w", err)
+		}
+
+		if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+			return nil, fmt.Errorf("upstream url scheme must be http or https")
+		}
+
+		upstream = httputil.NewSingleHostReverseProxy(parsedURL)
 	}
 
 	parser := services.YamlConfigParser{}
@@ -67,41 +73,40 @@ func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	s := services.Server{
-		Upstream:      httputil.NewSingleHostReverseProxy(parsedURL),
-		RouteMatcher:  services.NewRouteMatcher(cfg.RoutePolicies),
-		Authorizer:    services.NewAuthorizer(cfg.ClaimPolicies),
-		Authenticator: services.NewAuthenticator([]byte(f.hmacKey)),
-	}
+	s := services.NewServer(
+		upstream,
+		services.NewRouteMatcher(cfg.RoutePolicies),
+		services.NewAuthorizer(cfg.ClaimPolicies),
+		services.NewAuthenticator([]byte(f.hmacKey)))
 
-	return &s, nil
+	return s, nil
 }
 
 func parseFlags() *flags {
-	p := flags{
+	f := flags{
 		configPath:    "/etc/bouncer/config.yaml",
 		listenAddress: ":3512",
 	}
 
-	flag.StringVar(&p.hmacKey, "k",
+	flag.StringVar(&f.hmacKey, "k",
 		lookupEnv("BOUNCER_SIGNING_KEY", ""),
 		"symmetric signing key to validate tokens")
 
-	flag.StringVar(&p.configPath, "p",
-		lookupEnv("BOUNCER_CONFIG_PATH", p.configPath),
-		fmt.Sprintf("Config YAML path, default = %s", p.configPath))
+	flag.StringVar(&f.configPath, "p",
+		lookupEnv("BOUNCER_CONFIG_PATH", f.configPath),
+		fmt.Sprintf("Config YAML path, default = %s", f.configPath))
 
-	flag.StringVar(&p.upstreamURL, "u",
+	flag.StringVar(&f.upstreamURL, "u",
 		lookupEnv("BOUNCER_UPSTREAM_URL", ""),
 		"URL to be called when the request is authorized")
 
-	flag.StringVar(&p.listenAddress, "l",
-		lookupEnv("BOUNCER_LISTEN_ADDRESS", p.listenAddress),
-		fmt.Sprintf("listen address, default = %s", p.listenAddress))
+	flag.StringVar(&f.listenAddress, "l",
+		lookupEnv("BOUNCER_LISTEN_ADDRESS", f.listenAddress),
+		fmt.Sprintf("listen address, default = %s", f.listenAddress))
 
 	flag.Parse()
 
-	return &p
+	return &f
 }
 
 func lookupEnv(key string, defaultVal string) string {

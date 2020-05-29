@@ -3,27 +3,41 @@ package services
 import (
 	"log"
 	"net/http"
+	"reflect"
 
 	"github.com/google/uuid"
 )
 
-// Server is a reverse proxy that receives requests and forwards them to the upstream server,
-// if they pass authentication and authorization challenges.
+// Server struct holds references to necessary services
 type Server struct {
 	Upstream      http.Handler
 	RouteMatcher  RouteMatcher
 	Authorizer    Authorizer
 	Authenticator Authenticator
+	proxyEnabled  bool
 }
 
-// Proxy performs authentication and authorization challenges based on given configuration
+// NewServer checks if upstream is set to enable proxy behavior, then returns a new Server instance
+func NewServer(upstream http.Handler, routeMatcher RouteMatcher, authorizer Authorizer, authenticator Authenticator) *Server {
+	proxyEnabled := upstream != nil && !reflect.ValueOf(upstream).IsNil()
+
+	return &Server{
+		proxyEnabled:  proxyEnabled,
+		Upstream:      upstream,
+		RouteMatcher:  routeMatcher,
+		Authorizer:    authorizer,
+		Authenticator: authenticator,
+	}
+}
+
+// Handle performs authentication and authorization challenges based on given configuration
 // and forwards the request to the upstream server.
-func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
+func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 	requestID := uuid.New()
 
-	log.Printf("[%v] Request received: %s %s", requestID, request.Method, request.RequestURI)
+	log.Printf("[%v] Request received: %s %s", requestID, request.Method, request.URL.Path)
 
-	matchedPolicies, err := s.RouteMatcher.MatchRoutePolicies(request.RequestURI, request.Method)
+	matchedPolicies, err := s.RouteMatcher.MatchRoutePolicies(request.URL.Path, request.Method)
 	if err != nil {
 		log.Printf("[%v] Error while matching path policies: %v", requestID, err)
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -42,7 +56,13 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 	// check if the most specific route allows anonymous requests
 	if s.Authorizer.IsAnonymousAllowed(matchedPolicies, request.Method) {
 		log.Printf("[%v] Allowed anonymous request.", requestID)
-		s.Upstream.ServeHTTP(writer, request)
+
+		if s.proxyEnabled {
+			s.Upstream.ServeHTTP(writer, request)
+		} else {
+			writer.WriteHeader(http.StatusOK)
+		}
+
 		return
 	}
 
@@ -71,5 +91,10 @@ func (s Server) Proxy(writer http.ResponseWriter, request *http.Request) {
 
 	// allow
 	log.Printf("[%v] Authorized.", requestID)
-	s.Upstream.ServeHTTP(writer, request)
+
+	if s.proxyEnabled {
+		s.Upstream.ServeHTTP(writer, request)
+	} else {
+		writer.WriteHeader(http.StatusOK)
+	}
 }
