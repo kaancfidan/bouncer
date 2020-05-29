@@ -108,7 +108,7 @@ claimPolicies:
  CanDeleteUsers: 
   - claim: permission
     values: [DeleteUser] 
-	
+
 routePolicies: 
  - path: /users/* 
    methods: [DELETE] 
