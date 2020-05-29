@@ -32,12 +32,14 @@ As an example, [this blog post](https://engineering.etermax.com/api-authorizatio
 
 #### How it works
 - The **API gateway** receives an HTTP request from the client and it forwards the request (usually without including the body) to **Bouncer**.
-- **Bouncer** matches the request method and path to a configured **route policy**.
-- If the **route policy** explicitly allows anonymous requests for the given method-path pair, a response with status code **200(OK)** is returned.  
+- **Bouncer** matches the request method and path to configured **route policies**.
+- If the most specific<sup>1</sup> **route policy** that matches the request explicitly allows anonymous requests, a response with status code **200(OK)** is returned.  
 - **Bouncer** extracts the [Bearer] token and validates it for authentication. If authentication fails, a response with status code **401(Unauthorized)** is returned.
 - **Bouncer** extracts claims from the validated token and checks if all **claim policies** corresponding to the matched **route policies** are fulfilled. If not, a response with status code **403(Forbidden)** is returned.
 - After all these challenges are passed, a response with status code **200(OK)** is returned.
 - If the authorization response is successful, the **API gateway** forwards the request to the appropriate backend service. 
+
+<sup>1</sup> The most specific route is the one that has the deepest path, the least number of wildcards and as a tie-breaker the one that specifies the request's method.
 
 ### Sidecar reverse proxy
 **Bouncer** can also be deployed as a reverse proxy to intercept requests to your application and perform authentication & authorization challenges before forwarding them.
