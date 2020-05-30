@@ -28,7 +28,7 @@ As an example, [this blog post](https://engineering.etermax.com/api-authorizatio
 **Bouncer** is the easier-to-use alternative to **OPA** in this scenario for the following reasons:
 - It is configured with a simple [YAML].
 - It is more opinionated, so expect less flexibility.
-- It aims to be out-of-the-box compatible with [nginx], [traefik] and [envoy] without any development effort.
+- It aims to be out-of-the-box compatible with **nginx**, **traefik** and **envoy** without any development effort.
 
 #### How it works
 - The **API gateway** receives an HTTP request from the client and it forwards the request (usually without including the body) to **Bouncer**.
@@ -130,7 +130,7 @@ The project is in its infancy, does not have MVP features yet and is far from be
 [JWT]: http://jwt.io/introduction
 [sidecar]: https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar
 [API gateway]: https://microservices.io/patterns/apigateway.html
-[nginx]: https://containo.us/traefik/
+[nginx]: https://www.nginx.com/
 [traefik]: https://containo.us/traefik/
 [envoy]: https://www.envoyproxy.io/
 [Open Policy Agent]: https://www.openpolicyagent.org/
