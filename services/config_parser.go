@@ -56,10 +56,15 @@ func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 }
 
 // ValidateConfig validates a parsed Config struct against following constraints:
+//
 // - Both claim policies and route policies must not be nil. Empty map/slices are allowed.
+//
 // - All ClaimRequirement instances must have a claim named.
+//
 // - All RoutePolicy instances must have a path configured.
+//
 // - If a RoutePolicy is flagged with AllowAnonymous, it cannot name any claim policies
+//
 // - If a RoutePolicy has a claim policy named, that claim policy should be defined in the ClaimPolicies section.
 func ValidateConfig(config *models.Config) error {
 	if config.ClaimPolicies == nil {
