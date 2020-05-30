@@ -50,9 +50,9 @@ This deployment strategy can be seen as a convenience feature as not all HTTP se
 When given an **upstream URL**, **Bouncer** performs the same checks as in the API gateway scenario, but rather than returning a response with **200(OK)**, it calls the upstream server. 
 
 ## Configuration 
-Bouncer mostly borrows its design from [claims-based authorization in .NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/authorization/claims?view=aspnetcore-3.1). Comparatively: 
-- It is more flexible in route configuration, because it uses standard wildcard patterns to match paths.
-- It is less flexible in claim policy configuration, because claim requirements can only be expressed in equality comparisons (and "contains" checks in case of array claims).
+**Bouncer** mostly borrows its design from [claims-based authorization in .NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/authorization/claims?view=aspnetcore-3.1). Comparing it to the original design: 
+- **Bouncer** is more flexible in route configuration, because it uses standard wildcard patterns to match paths.
+- **Bouncer** is less flexible in claim policy configuration, because claim requirements can only be expressed in equality comparisons (and "contains" checks in case of array claims).
 
 #### Employee example
 The following configuration example is loosely based on the example provided in the above .NET Core documentation:

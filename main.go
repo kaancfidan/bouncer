@@ -20,6 +20,10 @@ type flags struct {
 	configPath    string
 	upstreamURL   string
 	listenAddress string
+	validIssuer   string
+	validAudience string
+	expRequired   string
+	nbfRequired   string
 }
 
 func main() {
@@ -77,7 +81,12 @@ func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 		upstream,
 		services.NewRouteMatcher(cfg.RoutePolicies),
 		services.NewAuthorizer(cfg.ClaimPolicies),
-		services.NewAuthenticator([]byte(f.hmacKey)))
+		services.NewAuthenticator(
+			[]byte(f.hmacKey),
+			f.validIssuer,
+			f.validAudience,
+			f.expRequired != "false",
+			f.nbfRequired != "false"))
 
 	return s, nil
 }
@@ -86,6 +95,8 @@ func parseFlags() *flags {
 	f := flags{
 		configPath:    "/etc/bouncer/config.yaml",
 		listenAddress: ":3512",
+		expRequired:   "true",
+		nbfRequired:   "true",
 	}
 
 	flag.StringVar(&f.hmacKey, "k",
@@ -96,13 +107,29 @@ func parseFlags() *flags {
 		lookupEnv("BOUNCER_CONFIG_PATH", f.configPath),
 		fmt.Sprintf("Config YAML path, default = %s", f.configPath))
 
-	flag.StringVar(&f.upstreamURL, "u",
-		lookupEnv("BOUNCER_UPSTREAM_URL", ""),
-		"URL to be called when the request is authorized")
-
 	flag.StringVar(&f.listenAddress, "l",
 		lookupEnv("BOUNCER_LISTEN_ADDRESS", f.listenAddress),
 		fmt.Sprintf("listen address, default = %s", f.listenAddress))
+
+	flag.StringVar(&f.upstreamURL, "url",
+		lookupEnv("BOUNCER_UPSTREAM_URL", ""),
+		"URL to be called when the request is authorized")
+
+	flag.StringVar(&f.validIssuer, "iss",
+		lookupEnv("BOUNCER_VALID_ISSUER", ""),
+		fmt.Sprintf("valid token issuer"))
+
+	flag.StringVar(&f.validAudience, "aud",
+		lookupEnv("BOUNCER_VALID_AUDIENCE", ""),
+		fmt.Sprintf("valid token audience"))
+
+	flag.StringVar(&f.expRequired, "exp",
+		lookupEnv("BOUNCER_REQUIRE_EXPIRATION", f.expRequired),
+		fmt.Sprintf("require token expiration timestamp claims, default = %s", f.expRequired))
+
+	flag.StringVar(&f.nbfRequired, "nbf",
+		lookupEnv("BOUNCER_REQUIRE_NOT_BEFORE", f.nbfRequired),
+		fmt.Sprintf("require token not before timestamp claims, default = %s", f.nbfRequired))
 
 	flag.Parse()
 
