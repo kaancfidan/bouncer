@@ -552,7 +552,12 @@ func TestIntegration(t *testing.T) {
 
 			routeMatcher := services.NewRouteMatcher(cfg.RoutePolicies)
 			authorizer := services.NewAuthorizer(cfg.ClaimPolicies)
-			authenticator := services.NewAuthenticator(hmacKey)
+			authenticator := services.NewAuthenticator(
+				hmacKey,
+				"",
+				"",
+				false,
+				false)
 
 			s := services.NewServer(
 				nil,
