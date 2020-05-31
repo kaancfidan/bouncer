@@ -15,8 +15,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "happy path",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "http://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    false,
@@ -24,16 +24,28 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "no config",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "http://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
 			},
 			cfgContent: "",
 			wantErr:    true,
 		},
 		{
-			name: "auth server without proxy",
+			name: "reverse proxy",
 			flags: &flags{
-				hmacKey: "SuperSecretKey123!",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
+				upstreamURL:   "http://localhost:8080",
+			},
+			cfgContent: "claimPolicies: {}\nroutePolicies: []",
+			wantErr:    false,
+		},
+		{
+			name: "clock skewed",
+			flags: &flags{
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
+				clockSkew:     "10",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    false,
@@ -41,8 +53,9 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "invalid url scheme",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "tcp://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
+				upstreamURL:   "tcp://localhost:8080",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,
@@ -50,8 +63,9 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "malformed url",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "!!http://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
+				upstreamURL:   "!!http://localhost:8080",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,
@@ -59,8 +73,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "invalid config yaml",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "http://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
 			},
 			cfgContent: ": invalid",
 			wantErr:    true,
@@ -68,10 +82,36 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "invalid config content",
 			flags: &flags{
-				hmacKey:     "SuperSecretKey123!",
-				upstreamURL: "http://localhost:8080",
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
 			},
 			cfgContent: "claimPolicies:\n PolicyWithoutClaim:\n  - value: test\nroutePolicies: []",
+			wantErr:    true,
+		},
+		{
+			name: "no signing key",
+			flags: &flags{
+				signingMethod: "HMAC",
+			},
+			cfgContent: "claimPolicies: {}\nroutePolicies: []",
+			wantErr:    true,
+		},
+		{
+			name: "no signing method",
+			flags: &flags{
+				signingKey: "SuperSecretKey123!",
+			},
+			cfgContent: "claimPolicies: {}\nroutePolicies: []",
+			wantErr:    true,
+		},
+		{
+			name: "invalid clock skew flag",
+			flags: &flags{
+				signingKey:    "SuperSecretKey123!",
+				signingMethod: "HMAC",
+				clockSkew:     "not a number",
+			},
+			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,
 		},
 	}

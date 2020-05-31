@@ -261,7 +261,10 @@ func TestServer_Handle(t *testing.T) {
 			header := http.Header{}
 
 			request, err := http.NewRequest("GET", "/", nil)
-			assert.Nil(t, err)
+			if err != nil {
+				t.Errorf("could not be create request: %v", err)
+				return
+			}
 
 			var upstream *mocks.Handler
 			if tt.proxyEnabled {
@@ -357,7 +360,7 @@ func TestIntegration(t *testing.T) {
 		"   methods: [POST]\n" +
 		"   allowAnonymous: true\n"
 
-	hmacKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
+	signingKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
 
 	tests := []struct {
 		name           string
@@ -545,19 +548,32 @@ func TestIntegration(t *testing.T) {
 			buf.WriteString(tt.configYaml)
 
 			cfg, err := services.YamlConfigParser{}.ParseConfig(&buf)
-			assert.Nil(t, err)
+			if err != nil {
+				t.Errorf("could not be create config parser: %v", err)
+				return
+			}
 
 			err = services.ValidateConfig(cfg)
-			assert.Nil(t, err)
+			if err != nil {
+				t.Errorf("could not validate config: %v", err)
+				return
+			}
 
 			routeMatcher := services.NewRouteMatcher(cfg.RoutePolicies)
 			authorizer := services.NewAuthorizer(cfg.ClaimPolicies)
-			authenticator := services.NewAuthenticator(
-				hmacKey,
+			authenticator, err := services.NewAuthenticator(
+				signingKey,
+				"HMAC",
 				"",
 				"",
 				false,
-				false)
+				false,
+				0)
+
+			if err != nil {
+				t.Errorf("could not create authenticator: %v", err)
+				return
+			}
 
 			s := services.NewServer(
 				nil,
