@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/kaancfidan/bouncer/services"
 )
@@ -16,7 +17,8 @@ import (
 const version = "0.0.0-VERSION" // to be replaced in CI
 
 type flags struct {
-	hmacKey       string
+	signingKey    string
+	signingMethod string
 	configPath    string
 	upstreamURL   string
 	listenAddress string
@@ -24,6 +26,7 @@ type flags struct {
 	validAudience string
 	expRequired   string
 	nbfRequired   string
+	clockSkew     string
 }
 
 func main() {
@@ -37,7 +40,7 @@ func main() {
 
 	server, err := newServer(f, configReader)
 	if err != nil {
-		log.Fatalf("server could not be created: %v", err)
+		log.Fatalf("could not create server: %v", err)
 	}
 
 	http.HandleFunc("/", server.Handle)
@@ -77,16 +80,34 @@ func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
+	var clockSkew int
+	if f.clockSkew != "" {
+		clockSkew, err = strconv.Atoi(f.clockSkew)
+		if err != nil {
+			return nil, fmt.Errorf("clock skew flag %s cannot be converted to integer", f.clockSkew)
+		}
+	} else {
+		clockSkew = 0
+	}
+
+	authenticator, err := services.NewAuthenticator(
+		[]byte(f.signingKey),
+		f.signingMethod,
+		f.validIssuer,
+		f.validAudience,
+		f.expRequired != "false",
+		f.nbfRequired != "false",
+		clockSkew)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not create authenticator: %w", err)
+	}
+
 	s := services.NewServer(
 		upstream,
 		services.NewRouteMatcher(cfg.RoutePolicies),
 		services.NewAuthorizer(cfg.ClaimPolicies),
-		services.NewAuthenticator(
-			[]byte(f.hmacKey),
-			f.validIssuer,
-			f.validAudience,
-			f.expRequired != "false",
-			f.nbfRequired != "false"))
+		authenticator)
 
 	return s, nil
 }
@@ -99,9 +120,13 @@ func parseFlags() *flags {
 		nbfRequired:   "true",
 	}
 
-	flag.StringVar(&f.hmacKey, "k",
+	flag.StringVar(&f.signingKey, "k",
 		lookupEnv("BOUNCER_SIGNING_KEY", ""),
-		"symmetric signing key to validate tokens")
+		"cryptographic signing key")
+
+	flag.StringVar(&f.signingMethod, "m",
+		lookupEnv("BOUNCER_SIGNING_METHOD", ""),
+		"signing method, accepted values = [HMAC, RSA, EC]")
 
 	flag.StringVar(&f.configPath, "p",
 		lookupEnv("BOUNCER_CONFIG_PATH", f.configPath),
@@ -129,6 +154,10 @@ func parseFlags() *flags {
 
 	flag.StringVar(&f.nbfRequired, "nbf",
 		lookupEnv("BOUNCER_REQUIRE_NOT_BEFORE", f.nbfRequired),
+		fmt.Sprintf("require token not before timestamp claims, default = %s", f.nbfRequired))
+
+	flag.StringVar(&f.clockSkew, "clk",
+		lookupEnv("BOUNCER_CLOCK_SKEW", f.clockSkew),
 		fmt.Sprintf("require token not before timestamp claims, default = %s", f.nbfRequired))
 
 	flag.Parse()
