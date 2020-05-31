@@ -119,7 +119,8 @@ func parseFlags() *flags {
 		expRequired:   "true",
 		nbfRequired:   "true",
 	}
-
+	
+	printVersion := flag.Bool("v", false, "print version and exit")
 	flag.StringVar(&f.signingKey, "k",
 		lookupEnv("BOUNCER_SIGNING_KEY", ""),
 		"cryptographic signing key")
@@ -161,6 +162,11 @@ func parseFlags() *flags {
 		fmt.Sprintf("require token not before timestamp claims, default = %s", f.nbfRequired))
 
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Printf("Bouncer version: %s\n", version)
+		os.Exit(0)
+	}
 
 	return &f
 }
