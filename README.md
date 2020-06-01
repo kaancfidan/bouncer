@@ -1,4 +1,4 @@
-# Bouncer [![bouncer](https://github.com/kaancfidan/bouncer/blob/master/gopher.png)](https://gopherize.me/gopher/c9a63ec34e1f313f408fc4aa378666cead40a271)
+# Bouncer [![bouncer](https://raw.githubusercontent.com/kaancfidan/bouncer/master/gopher.png)](https://gopherize.me/gopher/c9a63ec34e1f313f408fc4aa378666cead40a271)
 [![Go](https://github.com/kaancfidan/bouncer/workflows/Go/badge.svg)](https://github.com/kaancfidan/bouncer/actions?query=workflow%3AGo) [![Go Report Card](https://goreportcard.com/badge/github.com/kaancfidan/bouncer)](https://goreportcard.com/report/github.com/kaancfidan/bouncer) [![Maintainability](https://api.codeclimate.com/v1/badges/a4d16c48c6d1b41e1ea9/maintainability)](https://codeclimate.com/github/kaancfidan/bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/bouncer)](https://codecov.io/gh/kaancfidan/bouncer)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer?ref=badge_shield)
 
@@ -105,6 +105,7 @@ The following is a mock user management system in which:
 - Deleting users also requires a special `permission` claim that:
   - either has a value equal to `DeleteUser` as in `"permission": "DeleteUser"`
   - or is an array that contains the `DeleteUser` value as in `"permission": ["AddUser", "ModifyUser", "DeleteUser"]`
+
 ```yaml
 claimPolicies: 
  CanDeleteUsers: 
