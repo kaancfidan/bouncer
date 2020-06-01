@@ -1,5 +1,5 @@
 # Bouncer [![bouncer](https://raw.githubusercontent.com/kaancfidan/bouncer/master/gopher.png)](https://gopherize.me/gopher/c9a63ec34e1f313f408fc4aa378666cead40a271)
-[![Go](https://github.com/kaancfidan/bouncer/workflows/Go/badge.svg)](https://github.com/kaancfidan/bouncer/actions?query=workflow%3AGo) [![Docker Pulls](https://img.shields.io/docker/pulls/kaancfidan/bouncer)](https://hub.docker.com/r/kaancfidan/bouncer) [![Go Report Card](https://goreportcard.com/badge/github.com/kaancfidan/bouncer)](https://goreportcard.com/report/github.com/kaancfidan/bouncer) [![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/kaancfidan/bouncer)](https://codeclimate.com/github/kaancfidan/bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/bouncer)](https://codecov.io/gh/kaancfidan/bouncer)
+[![Go](https://github.com/kaancfidan/bouncer/workflows/Go/badge.svg)](https://github.com/kaancfidan/bouncer/actions?query=workflow%3AGo) [![Docker Pulls](https://img.shields.io/docker/pulls/kaancfidan/bouncer)](https://hub.docker.com/r/kaancfidan/bouncer) [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/kaancfidan/bouncer?sort=semver)](https://hub.docker.com/r/kaancfidan/bouncer) [![Go Report Card](https://goreportcard.com/badge/github.com/kaancfidan/bouncer)](https://goreportcard.com/report/github.com/kaancfidan/bouncer) [![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/kaancfidan/bouncer)](https://codeclimate.com/github/kaancfidan/bouncer/maintainability) [![codecov](https://img.shields.io/codecov/c/github/kaancfidan/bouncer)](https://codecov.io/gh/kaancfidan/bouncer)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer?ref=badge_shield)
 
 Bouncer is a [JWT]-based authentication and authorization service. 
@@ -31,8 +31,8 @@ As an example, [this blog post](https://engineering.etermax.com/api-authorizatio
 - It aims to be out-of-the-box compatible with **nginx**, **traefik** and **envoy** without any development effort.
 
 #### How it works
-- The **API gateway** receives an HTTP request from the client and it forwards the request (usually without including the body) to **Bouncer**.
-- **Bouncer** matches the request method and path to configured **route policies**.
+- The **API gateway** receives an HTTP request from the client and forwards it (usually without including the body) to **Bouncer**.
+- **Bouncer** matches the request method and path (i.e. GET /stuff/) to configured **route policies**.
 - If the most specific<sup>1</sup> **route policy** that matches the request explicitly allows anonymous requests, a response with status code **200(OK)** is returned.  
 - **Bouncer** extracts the [Bearer] token and validates it for authentication. If authentication fails, a response with status code **401(Unauthorized)** is returned.
 - **Bouncer** extracts claims from the validated token and checks if all **claim policies** corresponding to the matched **route policies** are fulfilled. If not, a response with status code **403(Forbidden)** is returned.
@@ -54,37 +54,10 @@ When given an **upstream URL**, **Bouncer** performs the same checks as in the A
 - **Bouncer** is more flexible in route configuration, because it uses standard wildcard patterns to match paths.
 - **Bouncer** is less flexible in claim policy configuration, because claim requirements can only be expressed in equality comparisons (and "contains" checks in case of array claims).
 
-#### Employee example
-The following configuration example is loosely based on the example provided in the above .NET Core documentation:
-
-```yaml
-claimPolicies:
- EmployeeOnly:
-  - claim: employee_number
- Founders:
-  - claim: employee_number
-    values: [1,2,3,4,5]
- HumanResources:
-  - claim: department
-    values: [HumanResources]
-
-routePolicies:
- - path: /vacation/**
-   policyName: EmployeeOnly
- - path: /vacation/policy
-   allowAnonymous: true
- - path: /vacation/*/
-   methods: [PUT, PATCH]
-   policyName: Founders
- - path: /salary/**
-   policyName: EmployeeOnly
- - path: /salary/*/
-   methods: [PUT, PATCH]
-   policyName: HumanResources
-```
-
+### Examples
 #### Allow anonymous example
 The following configuration depicts a system in which all requests are allowed in without any authentication, except DELETEs and the ones with intentions to destroy the server.
+
 ```yaml
 claimPolicies: {} 
 
@@ -121,8 +94,82 @@ routePolicies:
    allowAnonymous: true
 ```
 
+#### Employee example
+The following configuration example is loosely based on the example provided in the [.NET Core docs](https://docs.microsoft.com/en-us/aspnet/core/security/authorization/claims?view=aspnetcore-3.1):
+
+```yaml
+claimPolicies:
+ EmployeeOnly:
+  - claim: employee_number
+ Founders:
+  - claim: employee_number
+    values: [1,2,3,4,5]
+ HumanResources:
+  - claim: department
+    values: [HumanResources]
+
+routePolicies:
+ - path: /vacation/**
+   policyName: EmployeeOnly
+ - path: /vacation/policy
+   allowAnonymous: true
+ - path: /vacation/*/
+   methods: [PUT, PATCH]
+   policyName: Founders
+ - path: /salary/**
+   policyName: EmployeeOnly
+ - path: /salary/*/
+   methods: [PUT, PATCH]
+   policyName: HumanResources
+```
+
 ## Current status
-The project is in its infancy, does not have MVP features yet and is far from being production-grade.
+First version has been released! 🎉 It's not battle-tested yet, but it's a start. 
+
+#### Current functionality in a nutshell:
+- Static signing key configuration w/ HMAC, RSA and EC support
+- Single valid issuer and audience configuration
+- Token expiration, "not before" and "issued at" checks with clock skew tolerance
+- Authorization policy config with YAML
+- Reverse proxy mode without TLS termination 
+
+## Usage
+### Docker image
+Create a volume directory:
+```zsh
+➜  ~ mkdir bouncer
+```
+Put a config YAML:
+```zsh
+➜  ~ echo "claimPolicies: {}\nroutePolicies: []\n" > bouncer/config.yaml
+```
+Run bouncer:
+```zsh
+➜  ~ docker run \
+--name bouncer \
+-d \
+--restart always \
+-e BOUNCER_SIGNING_METHOD=HMAC \
+-e BOUNCER_SIGNING_KEY=ThisIsSupposedToBeALongStringOfBytesLikeSixtyFourCharactersLong. \
+-v `pwd`/bouncer:/etc/bouncer \
+kaancfidan/bouncer:latest
+```
+
+### Environment variables and command line flags
+Every startup setting has an environment variable and a CLI flag counterpart. 
+
+| Environment Variable | CLI Flag | Description |
+| -------------------- | -------- | ----------- |
+| BOUNCER_SIGNING_KEY | -k | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
+| BOUNCER_SIGNING_METHOD | -m | Signing method. Accepted values are **[HMAC, RSA, EC]**. |
+| BOUNCER_CONFIG_PATH | -p | Config YAML path. **default = /etc/bouncer/config.yaml** |
+| BOUNCER_LISTEN_ADDRESS | -l | TCP listen address. **default = :3512** |
+| BOUNCER_UPSTREAM_URL | --url | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode. |
+| BOUNCER_VALID_ISSUER  | --iss | Valid issuer id. If set Bouncer validates **iss** claim. |
+| BOUNCER_VALID_AUDIENCE  | --aud | Valid audience id. If set Bouncer validates **aud** claim. |
+| BOUNCER_REQUIRE_EXPIRATION  | --exp | Require expiration (**exp**) timestamp on tokens. Unless explicitly set to **false**, **default = true** |
+| BOUNCER_REQUIRE_NOT_BEFORE  | --nbf | Require "not before" (**nbf**) timestamp on tokens. Unless explicitly set to **false**, **default = true** |
+| BOUNCER_CLOCK_SKEW  | --clk | Clock skew tolerance in seconds. When set **iat**, **exp**, **nbf** claims are checked with the given tolerance. |
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer?ref=badge_large)
