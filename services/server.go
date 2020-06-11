@@ -6,27 +6,37 @@ import (
 	"reflect"
 
 	"github.com/google/uuid"
+
+	"github.com/kaancfidan/bouncer/models"
 )
 
 // Server struct holds references to necessary services
 type Server struct {
-	Upstream      http.Handler
-	RouteMatcher  RouteMatcher
-	Authorizer    Authorizer
-	Authenticator Authenticator
+	upstream      http.Handler
+	routeMatcher  RouteMatcher
+	authorizer    Authorizer
+	authenticator Authenticator
+	config        models.ServerConfig
 	proxyEnabled  bool
 }
 
 // NewServer checks if upstream is set to enable proxy behavior, then returns a new Server instance
-func NewServer(upstream http.Handler, routeMatcher RouteMatcher, authorizer Authorizer, authenticator Authenticator) *Server {
+func NewServer(
+	upstream http.Handler,
+	routeMatcher RouteMatcher,
+	authorizer Authorizer,
+	authenticator Authenticator,
+	config models.ServerConfig) *Server {
+
 	proxyEnabled := upstream != nil && !reflect.ValueOf(upstream).IsNil()
 
 	return &Server{
+		upstream:      upstream,
+		routeMatcher:  routeMatcher,
+		authorizer:    authorizer,
+		authenticator: authenticator,
+		config:        config,
 		proxyEnabled:  proxyEnabled,
-		Upstream:      upstream,
-		RouteMatcher:  routeMatcher,
-		Authorizer:    authorizer,
-		Authenticator: authenticator,
 	}
 }
 
@@ -35,14 +45,30 @@ func NewServer(upstream http.Handler, routeMatcher RouteMatcher, authorizer Auth
 func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 	requestID := uuid.New()
 
-	log.Printf("[%v] Request received: %s %s", requestID, request.Method, request.URL.Path)
+	var path, method string
+	if s.config.OriginalRequestHeaders == nil {
+		path = request.URL.Path
+		method = request.Method
+	} else {
+		path = request.Header.Get(s.config.OriginalRequestHeaders.Path)
+		method = request.Header.Get(s.config.OriginalRequestHeaders.Method)
+	}
 
-	matchedPolicies, err := s.RouteMatcher.MatchRoutePolicies(request.URL.Path, request.Method)
+	log.Printf("[%v] Request received: %s %s", requestID, method, path)
+
+	matchedPolicies, err := s.routeMatcher.MatchRoutePolicies(path, method)
 	if err != nil {
 		log.Printf("[%v] Error while matching path policies: %v", requestID, err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	var matchedPaths []string
+	for _, r := range matchedPolicies {
+		matchedPaths = append(matchedPaths, r.Path)
+	}
+
+	log.Printf("[%v] Paths matched: %v", requestID, matchedPaths)
 
 	var matchedPolicyNames []string
 	for _, r := range matchedPolicies {
@@ -54,11 +80,11 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("[%v] Policies matched: %v", requestID, matchedPolicyNames)
 
 	// check if the most specific route allows anonymous requests
-	if s.Authorizer.IsAnonymousAllowed(matchedPolicies, request.Method) {
+	if s.authorizer.IsAnonymousAllowed(matchedPolicies, method) {
 		log.Printf("[%v] Allowed anonymous request.", requestID)
 
 		if s.proxyEnabled {
-			s.Upstream.ServeHTTP(writer, request)
+			s.upstream.ServeHTTP(writer, request)
 		} else {
 			writer.WriteHeader(http.StatusOK)
 		}
@@ -68,7 +94,7 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 
 	authHeader := request.Header.Get("Authorization")
 
-	claims, err := s.Authenticator.Authenticate(authHeader)
+	claims, err := s.authenticator.Authenticate(authHeader)
 	if err != nil {
 		log.Printf("[%v] Error while authenticating: %v", requestID, err)
 		writer.Header().Add("WWW-Authenticate", "Bearer")
@@ -76,7 +102,7 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	failedClaim, err := s.Authorizer.Authorize(matchedPolicyNames, claims)
+	failedClaim, err := s.authorizer.Authorize(matchedPolicyNames, claims)
 	if err != nil {
 		log.Printf("[%v] Error while authorizing: %v", requestID, err)
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -93,7 +119,7 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("[%v] Authorized.", requestID)
 
 	if s.proxyEnabled {
-		s.Upstream.ServeHTTP(writer, request)
+		s.upstream.ServeHTTP(writer, request)
 	} else {
 		writer.WriteHeader(http.StatusOK)
 	}

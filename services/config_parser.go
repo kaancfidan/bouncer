@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -27,6 +28,14 @@ func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 	err := decoder.Decode(&cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse config yaml: %v", err)
+	}
+
+	// parse upstream URL
+	if cfg.Server.UpstreamURL != "" {
+		cfg.Server.ParsedURL, err = url.Parse(cfg.Server.UpstreamURL)
+		if err != nil {
+			return nil, fmt.Errorf("upstream url could not be parsed: %w", err)
+		}
 	}
 
 	// sort route specifications with decreasing specifity
@@ -66,16 +75,35 @@ func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 // - If a RoutePolicy is flagged with AllowAnonymous, it cannot name any claim policies
 //
 // - If a RoutePolicy has a claim policy named, that claim policy should be defined in the ClaimPolicies section.
-func ValidateConfig(config *models.Config) error {
-	if config.ClaimPolicies == nil {
-		return fmt.Errorf("claim policies nil")
-	}
-	if config.RoutePolicies == nil {
-		return fmt.Errorf("route policies nil")
+func ValidateConfig(cfg *models.Config) error {
+	err := validateServer(cfg.Server)
+	if err != nil {
+		return fmt.Errorf("invalid server section: %w", err)
 	}
 
-	// check claim policies
-	for policyName, policy := range config.ClaimPolicies {
+	err = validateClaimPolicies(cfg.ClaimPolicies)
+	if err != nil {
+		return fmt.Errorf("invalid claimPolicies section: %w", err)
+	}
+
+	err = validateRoutePolicies(cfg.ClaimPolicies, cfg.RoutePolicies)
+	if err != nil {
+		return fmt.Errorf("invalid routePolicies section: %w", err)
+	}
+
+	return nil
+}
+
+func validateServer(cfg models.ServerConfig) error {
+	if cfg.ParsedURL != nil && cfg.ParsedURL.Scheme != "http" && cfg.ParsedURL.Scheme != "https" {
+		return fmt.Errorf("upstream url scheme must be http or https")
+	}
+
+	return nil
+}
+
+func validateClaimPolicies(cfg models.ClaimPolicyConfig) error {
+	for policyName, policy := range cfg {
 		for _, requirement := range policy {
 			// Claim field is mandatory
 			if requirement.Claim == "" {
@@ -85,14 +113,18 @@ func ValidateConfig(config *models.Config) error {
 		}
 	}
 
-	// existing claim policy names
+	return nil
+}
+
+func validateRoutePolicies(claimPolicies models.ClaimPolicyConfig, routePolicies models.RoutePolicyConfig) error {
+	// find existing claim policy names
 	existingPolicies := make(map[string]bool)
-	for k := range config.ClaimPolicies {
+	for k := range claimPolicies {
 		existingPolicies[k] = true
 	}
 
 	// check route policies
-	for _, p := range config.RoutePolicies {
+	for _, p := range routePolicies {
 		if p.Path == "" {
 			return fmt.Errorf("found route policy without a path denition: %v", p)
 		}

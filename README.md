@@ -165,11 +165,6 @@ Every startup setting has an environment variable and a CLI flag counterpart.
 | BOUNCER_CONFIG_PATH | -p | Config YAML path. **default = /etc/bouncer/config.yaml** |
 | BOUNCER_LISTEN_ADDRESS | -l | TCP listen address. **default = :3512** |
 | BOUNCER_UPSTREAM_URL | --url | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode. |
-| BOUNCER_VALID_ISSUER  | --iss | Valid issuer id. If set Bouncer validates **iss** claim. |
-| BOUNCER_VALID_AUDIENCE  | --aud | Valid audience id. If set Bouncer validates **aud** claim. |
-| BOUNCER_REQUIRE_EXPIRATION  | --exp | Require expiration (**exp**) timestamp on tokens. Unless explicitly set to **false**, **default = true** |
-| BOUNCER_REQUIRE_NOT_BEFORE  | --nbf | Require "not before" (**nbf**) timestamp on tokens. Unless explicitly set to **false**, **default = true** |
-| BOUNCER_CLOCK_SKEW  | --clk | Clock skew tolerance in seconds. When set **iat**, **exp**, **nbf** claims are checked with the given tolerance. |
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer?ref=badge_large)

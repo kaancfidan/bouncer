@@ -31,46 +31,6 @@ func TestNewServer(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			name: "reverse proxy",
-			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
-				upstreamURL:   "http://localhost:8080",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    false,
-		},
-		{
-			name: "clock skewed",
-			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
-				clockSkew:     "10",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    false,
-		},
-		{
-			name: "invalid url scheme",
-			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
-				upstreamURL:   "tcp://localhost:8080",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    true,
-		},
-		{
-			name: "malformed url",
-			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
-				upstreamURL:   "!!http://localhost:8080",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    true,
-		},
-		{
 			name: "invalid config yaml",
 			flags: &flags{
 				signingKey:    "SuperSecretKey123!",
@@ -100,16 +60,6 @@ func TestNewServer(t *testing.T) {
 			name: "no signing method",
 			flags: &flags{
 				signingKey: "SuperSecretKey123!",
-			},
-			cfgContent: "claimPolicies: {}\nroutePolicies: []",
-			wantErr:    true,
-		},
-		{
-			name: "invalid clock skew flag",
-			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
-				clockSkew:     "not a number",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,

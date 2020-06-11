@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+
+	"github.com/kaancfidan/bouncer/models"
 )
 
 // Authenticator interface
@@ -17,13 +19,9 @@ type Authenticator interface {
 
 // AuthenticatorImpl is a JWT based authentication implementation
 type AuthenticatorImpl struct {
-	signingKey         interface{}
-	signingMethod      string
-	validIssuer        string
-	validAudience      string
-	expirationRequired bool
-	notBeforeRequired  bool
-	clockSkew          int
+	signingKey    interface{}
+	signingMethod string
+	config        models.AuthenticationConfig
 }
 
 type claims struct {
@@ -69,11 +67,7 @@ func parseSigningKey(signingKey []byte, signingMethod string) (key interface{}, 
 func NewAuthenticator(
 	signingKey []byte,
 	signingMethod string,
-	validIssuer string,
-	validAudience string,
-	expirationRequired bool,
-	notBeforeRequired bool,
-	clockSkew int) (*AuthenticatorImpl, error) {
+	config models.AuthenticationConfig) (*AuthenticatorImpl, error) {
 
 	key, err := parseSigningKey(signingKey, signingMethod)
 	if err != nil {
@@ -81,13 +75,9 @@ func NewAuthenticator(
 	}
 
 	return &AuthenticatorImpl{
-		signingKey:         key,
-		signingMethod:      signingMethod,
-		validIssuer:        validIssuer,
-		validAudience:      validAudience,
-		expirationRequired: expirationRequired,
-		notBeforeRequired:  notBeforeRequired,
-		clockSkew:          clockSkew,
+		signingKey:    key,
+		signingMethod: signingMethod,
+		config:        config,
 	}, nil
 }
 
@@ -114,7 +104,7 @@ func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface
 	// check claims for authorization
 	claims := claims{
 		MapClaims: jwt.MapClaims{},
-		ClockSkew: a.clockSkew,
+		ClockSkew: a.config.ClockSkewInSeconds,
 	}
 	_, err := jwt.ParseWithClaims(tokenString, &claims, a.keyFactory)
 
@@ -122,25 +112,25 @@ func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface
 		return nil, fmt.Errorf("error occurred while parsing claims: %w", err)
 	}
 
-	if _, ok := claims.MapClaims["exp"]; !ok && a.expirationRequired {
+	if _, ok := claims.MapClaims["exp"]; !ok && !a.config.IgnoreExpiration {
 		return nil, fmt.Errorf("required expiration timestamp not found")
 	}
 
-	if _, ok := claims.MapClaims["nbf"]; !ok && a.notBeforeRequired {
+	if _, ok := claims.MapClaims["nbf"]; !ok && !a.config.IgnoreNotBefore {
 		return nil, fmt.Errorf("required not before timestamp not found")
 	}
 
 	// verify audience
-	if a.validAudience != "" {
-		checkAud := claims.VerifyAudience(a.validAudience, true)
+	if a.config.Audience != "" {
+		checkAud := claims.VerifyAudience(a.config.Audience, true)
 		if !checkAud {
 			return nil, fmt.Errorf("invalid audience")
 		}
 	}
 
 	// verify issuer
-	if a.validIssuer != "" {
-		checkIss := claims.VerifyIssuer(a.validIssuer, true)
+	if a.config.Issuer != "" {
+		checkIss := claims.VerifyIssuer(a.config.Issuer, true)
 		if !checkIss {
 			return nil, fmt.Errorf("invalid issuer")
 		}
