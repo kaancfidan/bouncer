@@ -76,9 +76,9 @@ func (YamlConfigParser) ParseConfig(reader io.Reader) (*models.Config, error) {
 //
 // - If a RoutePolicy has a claim policy named, that claim policy should be defined in the ClaimPolicies section.
 func ValidateConfig(cfg *models.Config) error {
-	err := validateOperation(cfg.Server)
+	err := validateServer(cfg.Server)
 	if err != nil {
-		return fmt.Errorf("invalid operation section: %w", err)
+		return fmt.Errorf("invalid server section: %w", err)
 	}
 
 	err = validateClaimPolicies(cfg.ClaimPolicies)
@@ -88,13 +88,13 @@ func ValidateConfig(cfg *models.Config) error {
 
 	err = validateRoutePolicies(cfg.ClaimPolicies, cfg.RoutePolicies)
 	if err != nil {
-		return fmt.Errorf("invalid claimPolicies section: %w", err)
+		return fmt.Errorf("invalid routePolicies section: %w", err)
 	}
 
 	return nil
 }
 
-func validateOperation(cfg models.ServerConfig) error {
+func validateServer(cfg models.ServerConfig) error {
 	if cfg.ParsedURL != nil && cfg.ParsedURL.Scheme != "http" && cfg.ParsedURL.Scheme != "https" {
 		return fmt.Errorf("upstream url scheme must be http or https")
 	}
@@ -103,10 +103,6 @@ func validateOperation(cfg models.ServerConfig) error {
 }
 
 func validateClaimPolicies(cfg models.ClaimPolicyConfig) error {
-	if cfg == nil {
-		return fmt.Errorf("claim policies nil")
-	}
-
 	for policyName, policy := range cfg {
 		for _, requirement := range policy {
 			// Claim field is mandatory
@@ -121,10 +117,6 @@ func validateClaimPolicies(cfg models.ClaimPolicyConfig) error {
 }
 
 func validateRoutePolicies(claimPolicies models.ClaimPolicyConfig, routePolicies models.RoutePolicyConfig) error {
-	if routePolicies == nil {
-		return fmt.Errorf("route policies nil")
-	}
-
 	// find existing claim policy names
 	existingPolicies := make(map[string]bool)
 	for k := range claimPolicies {

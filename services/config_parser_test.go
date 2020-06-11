@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -16,19 +17,9 @@ func TestYamlConfigParser_ParseConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "nil config",
-			yaml:    "",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "empty config",
-			yaml: "claimPolicies: {}\n" +
-				"routePolicies: []",
-			want: &models.Config{
-				ClaimPolicies: map[string][]models.ClaimRequirement{},
-				RoutePolicies: []models.RoutePolicy{},
-			},
+			name:    "empty config",
+			yaml:    "{}",
+			want:    &models.Config{},
 			wantErr: false,
 		},
 		{
@@ -68,6 +59,36 @@ func TestYamlConfigParser_ParseConfig(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "server config deserialize",
+			yaml: "server:\n" +
+				" originalRequestHeaders:\n" +
+				"  path: X-test-path\n" +
+				"  method: X-test-method\n" +
+				" upstreamUrl: http://url/to/upstream",
+			want: &models.Config{
+				Server: models.ServerConfig{
+					OriginalRequestHeaders: &models.OriginalRequestHeaders{
+						Method: "X-test-method",
+						Path:   "X-test-path",
+					},
+					UpstreamURL: "http://url/to/upstream",
+					ParsedURL: &url.URL{
+						Scheme: "http",
+						Host:   "url",
+						Path:   "/to/upstream",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "upstream url error",
+			yaml: "server:\n" +
+				" upstreamUrl: ¡http://clearly not a valid url!",
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "sorts route policies by specifity",
@@ -120,27 +141,8 @@ func TestValidateConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "nil claim policies",
-			config: &models.Config{
-				ClaimPolicies: nil,
-				RoutePolicies: []models.RoutePolicy{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "nil route policies",
-			config: &models.Config{
-				ClaimPolicies: map[string][]models.ClaimRequirement{},
-				RoutePolicies: nil,
-			},
-			wantErr: true,
-		},
-		{
-			name: "empty config",
-			config: &models.Config{
-				ClaimPolicies: map[string][]models.ClaimRequirement{},
-				RoutePolicies: []models.RoutePolicy{},
-			},
+			name:    "empty config",
+			config:  &models.Config{},
 			wantErr: false,
 		},
 		{
@@ -235,9 +237,28 @@ func TestValidateConfig(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "invalid url scheme",
+			config: &models.Config{
+				Server: models.ServerConfig{
+					UpstreamURL: "tcp://not/a/valid/scheme",
+				},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.config.Server.UpstreamURL != "" {
+				var err error
+				tt.config.Server.ParsedURL, err = url.Parse(tt.config.Server.UpstreamURL)
+				if err != nil {
+					t.Errorf("could not parse url")
+					return
+				}
+			}
+
 			if err := ValidateConfig(tt.config); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}

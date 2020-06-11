@@ -383,6 +383,13 @@ func TestIntegration(t *testing.T) {
 		wantStatusCode int
 	}{
 		{
+			name:           "empty config",
+			configYaml:     "{}",
+			method:         "GET",
+			path:           "/",
+			wantStatusCode: http.StatusUnauthorized,
+		},
+		{
 			name:           "anon example - do stuff - anonymous",
 			configYaml:     defaultAnonCfg,
 			method:         "POST",
@@ -603,7 +610,7 @@ func TestIntegration(t *testing.T) {
 
 			cfg, err := services.YamlConfigParser{}.ParseConfig(&buf)
 			if err != nil {
-				t.Errorf("could not be create config parser: %v", err)
+				t.Errorf("could not parse config: %v", err)
 				return
 			}
 

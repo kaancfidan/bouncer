@@ -63,6 +63,13 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	var matchedPaths []string
+	for _, r := range matchedPolicies {
+		matchedPaths = append(matchedPaths, r.Path)
+	}
+
+	log.Printf("[%v] Paths matched: %v", requestID, matchedPaths)
+
 	var matchedPolicyNames []string
 	for _, r := range matchedPolicies {
 		if r.PolicyName != "" {
