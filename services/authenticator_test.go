@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/kaancfidan/bouncer/models"
 	"github.com/kaancfidan/bouncer/services"
 )
 
@@ -12,10 +13,7 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 		name          string
 		signingKey    []byte
 		signingMethod string
-		validIssuer   string
-		validAudience string
-		expRequired   bool
-		nbfRequired   bool
+		cfg           models.AuthenticationConfig
 		authHeader    string
 		want          map[string]interface{}
 		wantErr       bool
@@ -24,30 +22,46 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "invalid auth header",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			authHeader:    "this is not a valid bearer token",
-			want:          nil,
-			wantErr:       true,
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
+			authHeader: "this is not a valid bearer token",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
 			name:          "invalid auth scheme",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			authHeader:    "Basic blabla",
-			want:          nil,
-			wantErr:       true,
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
+			authHeader: "Basic blabla",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
 			name:          "invalid jwt",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			authHeader:    "Bearer invalid",
-			want:          nil,
-			wantErr:       true,
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
+			authHeader: "Bearer invalid",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
 			name:          "key validation fail",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"8qvU6CrwlVBvXmhbnr2lyKGAFKaTMshDxQE7W-1LM54",
@@ -58,6 +72,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "key validation success",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -70,6 +88,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "bearer scheme case insensitive",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -82,6 +104,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "unsupported algorithm",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ.B2qcvz8Ks8eQoEI9WzYSyCnC2q3VCY" +
 				"5TMvrI62uMCOfHEBuW68HBxFEFfqSNawURnGPGNJmBZW4h1iREU85eWC" +
@@ -94,17 +120,25 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "issuer missing",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+				Issuer:           "http://url/to/some/issuer",
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
-			validIssuer: "http://url/to/some/issuer",
-			want:        nil,
-			wantErr:     true,
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name:          "issuer claim available but no valid issuer configured",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpc3MiOiJodHRwOi8vdXJsL3RvL3NvbWUvaXNzdWVyIn0." +
 				"-SdBeoR7nVevkZIhKh-QlAl64k5ZzKQoV71f3Q-Djcs",
@@ -118,7 +152,11 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "valid issuer",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			validIssuer:   "http://url/to/some/issuer",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+				Issuer:           "http://url/to/some/issuer",
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpc3MiOiJodHRwOi8vdXJsL3RvL3NvbWUvaXNzdWVyIn0." +
 				"-SdBeoR7nVevkZIhKh-QlAl64k5ZzKQoV71f3Q-Djcs",
@@ -132,7 +170,11 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "audience missing",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			validAudience: "http://url/to/some/audience",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+				Audience:         "http://url/to/some/audience",
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -143,6 +185,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "audience claim available but no valid audience configured",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJhdWQiOiJodHRwOi8vdXJsL3RvL3NvbWUvYXVkaWVuY2UifQ." +
 				"QslmtoVNaP9OSeKRvkxeR_UBMTdXL6098xLtbJpx114",
@@ -156,7 +202,11 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "valid audience",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			validAudience: "http://url/to/some/audience",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+				Audience:         "http://url/to/some/audience",
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJhdWQiOiJodHRwOi8vdXJsL3RvL3NvbWUvYXVkaWVuY2UifQ." +
 				"QslmtoVNaP9OSeKRvkxeR_UBMTdXL6098xLtbJpx114",
@@ -170,6 +220,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "expired token",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: false,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpYXQiOjE1OTA4NTAzMjUsImV4cCI6MTU5MDg1MDMyNn0." +
 				"IXoMkKWQRWZUp1TklXmZw3PbQl2_XxL8MxomJLb00Ec",
@@ -180,7 +234,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "required exp unavailable",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			expRequired:   true,
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: false,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -191,6 +248,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "token used before iat",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpYXQiOjMyNTAzNjgwMDAwfQ." +
 				"Q_yvYtLhSEfEpA6hdTBZOwDKDWuYFVAdRA8juVbnltM",
@@ -201,6 +262,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "token used before nbf",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  false,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJuYmYiOjMyNTAzNjgwMDAwfQ." +
 				"5E-zZ8aJR7C2tIKdnDXUvVX9Z-T7ZUwlxZl668FJjWY",
@@ -211,7 +276,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			name:          "required nbf unavailable",
 			signingKey:    []byte("TestKey"),
 			signingMethod: "HMAC",
-			nbfRequired:   true,
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  false,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -230,6 +298,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 				"MwIDAQAB\n" +
 				"-----END PUBLIC KEY-----"),
 			signingMethod: "RSA",
+			cfg: models.AuthenticationConfig{
+				IgnoreExpiration: true,
+				IgnoreNotBefore:  true,
+			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -242,11 +314,7 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			a, err := services.NewAuthenticator(
 				tt.signingKey,
 				tt.signingMethod,
-				tt.validIssuer,
-				tt.validAudience,
-				tt.expRequired,
-				tt.nbfRequired,
-				0)
+				tt.cfg)
 
 			if err != nil {
 				t.Errorf("could not create authenticator: %v", err)
@@ -270,6 +338,7 @@ func TestNewAuthenticator(t *testing.T) {
 		name          string
 		signingKey    []byte
 		signingMethod string
+		cfg           models.AuthenticationConfig
 		wantErr       bool
 	}{
 		{
@@ -348,11 +417,7 @@ func TestNewAuthenticator(t *testing.T) {
 			_, err := services.NewAuthenticator(
 				tt.signingKey,
 				tt.signingMethod,
-				"test issuer",
-				"test audience",
-				true,
-				true,
-				0)
+				tt.cfg)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewAuthenticator() error = %v, wantErr %v", err, tt.wantErr)

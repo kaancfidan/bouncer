@@ -281,7 +281,8 @@ func TestServer_Handle(t *testing.T) {
 				upstream,
 				routeMatcher,
 				authorizer,
-				authenticator)
+				authenticator,
+				models.ServerConfig{})
 
 			tt.expectations(request, routeMatcher, authenticator, authorizer)
 
@@ -360,6 +361,17 @@ func TestIntegration(t *testing.T) {
 		"   methods: [POST]\n" +
 		"   allowAnonymous: true\n"
 
+	headerCfg := "server:\n" +
+		" originalRequestHeaders:\n" +
+		"  method: X-Original-Method\n" +
+		"  path: X-Original-URI\n" +
+		"claimPolicies: {}\n" +
+		"routePolicies:\n" +
+		" - path: /**\n" +
+		"   allowAnonymous: true\n" +
+		" - path: /test\n" +
+		"   allowAnonymous: false\n"
+
 	signingKey := []byte("iH0dQSVASteCf0ko3E9Ae9-rb_Ob4JD4bKVZQ7cTJphLxdhkOdTyXyFpk1nCASCx")
 
 	tests := []struct {
@@ -367,7 +379,7 @@ func TestIntegration(t *testing.T) {
 		configYaml     string
 		method         string
 		path           string
-		authHeader     string
+		headers        map[string]string
 		wantStatusCode int
 	}{
 		{
@@ -396,10 +408,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: defaultAnonCfg,
 			method:     "POST",
 			path:       "/destroy/server",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+					"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -421,10 +435,11 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "GET",
 			path:       "/vacation",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+					"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y"},
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
@@ -432,10 +447,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "GET",
 			path:       "/vacation",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+					"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -443,10 +460,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "PATCH",
 			path:       "/vacation/john.doe",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+					"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			},
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
@@ -454,10 +473,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "PATCH",
 			path:       "/vacation/john.doe",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjF9." +
-				"to5t1R1URIqX0q2CoI0pms5AXb77LYG0RqdrMH44XvM",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjF9." +
+					"to5t1R1URIqX0q2CoI0pms5AXb77LYG0RqdrMH44XvM",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -465,10 +486,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "GET",
 			path:       "/salary",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
-				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
+					"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -476,10 +499,11 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "PATCH",
 			path:       "/salary/john.doe",
-			authHeader: "Bearer " +
+			headers: map[string]string{"Authorization": "Bearer " +
 				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJuYW1lIjoiSm9obiBEb2UiLCJlbXBsb3llZV9udW1iZXIiOjEwfQ." +
 				"2nvg9meB_mJdUL9vLkZG6lolvTvTd-q_3Pe7CKdzZRA",
+			},
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
@@ -487,11 +511,13 @@ func TestIntegration(t *testing.T) {
 			configYaml: employeeCfg,
 			method:     "PATCH",
 			path:       "/salary/john.doe",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXI" +
-				"iOjI1LCJkZXBhcnRtZW50IjoiSHVtYW5SZXNvdXJjZXMifQ." +
-				"eI5xxQmYalG6B1Iae-fvLY2j3YzltF7mx-pVAxR8bLY",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSmFuZSBEb2UiLCJlbXBsb3llZV9udW1iZXI" +
+					"iOjI1LCJkZXBhcnRtZW50IjoiSHVtYW5SZXNvdXJjZXMifQ." +
+					"eI5xxQmYalG6B1Iae-fvLY2j3YzltF7mx-pVAxR8bLY",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -513,10 +539,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: userCfg,
 			method:     "GET",
 			path:       "/users",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+					"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -524,10 +552,12 @@ func TestIntegration(t *testing.T) {
 			configYaml: userCfg,
 			method:     "DELETE",
 			path:       "/users/kaancfidan",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UifQ." +
-				"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UifQ." +
+					"fVd54ocVD8GYRqBqTvit8aJm0tyesbocOTlOfiv_m1Y",
+			},
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
@@ -535,11 +565,35 @@ func TestIntegration(t *testing.T) {
 			configYaml: userCfg,
 			method:     "DELETE",
 			path:       "/users/kaancfidan",
-			authHeader: "Bearer " +
-				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-				"eyJuYW1lIjoiSm9obiBEb2UiLCJwZXJtaXNzaW9uIjoiRGVsZXRlVXNlciJ9." +
-				"UfayhfqkDaLcCIr1MGU6nGpv3q5DU6lyQKt2HtwFUs0",
+			headers: map[string]string{
+				"Authorization": "Bearer " +
+					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+					"eyJuYW1lIjoiSm9obiBEb2UiLCJwZXJtaXNzaW9uIjoiRGVsZXRlVXNlciJ9." +
+					"UfayhfqkDaLcCIr1MGU6nGpv3q5DU6lyQKt2HtwFUs0",
+			},
 			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:       "header example - anonymous",
+			configYaml: headerCfg,
+			method:     "GET",
+			path:       "/auth",
+			headers: map[string]string{
+				"X-Original-Method": "GET",
+				"X-Original-URI":    "/",
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:       "header example - authentication failed",
+			configYaml: headerCfg,
+			method:     "GET",
+			path:       "/auth",
+			headers: map[string]string{
+				"X-Original-Method": "GET",
+				"X-Original-URI":    "/test",
+			},
+			wantStatusCode: http.StatusUnauthorized,
 		},
 	}
 	for _, tt := range tests {
@@ -564,11 +618,10 @@ func TestIntegration(t *testing.T) {
 			authenticator, err := services.NewAuthenticator(
 				signingKey,
 				"HMAC",
-				"",
-				"",
-				false,
-				false,
-				0)
+				models.AuthenticationConfig{
+					IgnoreExpiration: true,
+					IgnoreNotBefore:  true,
+				})
 
 			if err != nil {
 				t.Errorf("could not create authenticator: %v", err)
@@ -579,11 +632,15 @@ func TestIntegration(t *testing.T) {
 				nil,
 				routeMatcher,
 				authorizer,
-				authenticator)
+				authenticator,
+				cfg.Server)
 
 			req, err := http.NewRequest(tt.method, tt.path, nil)
 			assert.Nil(t, err)
-			req.Header.Add("Authorization", tt.authHeader)
+
+			for k, v := range tt.headers {
+				req.Header.Add(k, v)
+			}
 
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(s.Handle)
