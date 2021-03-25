@@ -32,6 +32,15 @@ func TestRouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "path error",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			path:    ".::this is not a valid path::.",
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "exact matched route",
 			routePolicies: []models.RoutePolicy{
 				{Path: "/test", Methods: []string{"GET"}},
