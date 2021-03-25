@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -29,12 +31,17 @@ func NewRouteMatcher(routePolicies []models.RoutePolicy) *RouteMatcherImpl {
 func (g RouteMatcherImpl) MatchRoutePolicies(path string, method string) ([]models.RoutePolicy, error) {
 	matches := make([]models.RoutePolicy, 0)
 	for _, rp := range g.routePolicies {
-		normalizedPath := "/" + strings.Trim(path, " \t\n/") + "/"
+		parsed, err := url.Parse(path)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse path: %v", err)
+		}
+
+		normalizedPath := "/" + strings.Trim(parsed.Path, " \t\n/") + "/"
 		normalizedPolicyPath := "/" + strings.Trim(rp.Path, " \t\n/") + "/"
 
 		g, err := glob.Compile(normalizedPolicyPath, '/')
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not compile policy glob: %v", err)
 		}
 
 		// check if route matches

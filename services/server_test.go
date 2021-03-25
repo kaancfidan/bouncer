@@ -18,6 +18,8 @@ import (
 func TestServer_Handle(t *testing.T) {
 	tests := []struct {
 		name               string
+		requestPath        string
+		config             models.ServerConfig
 		proxyEnabled       bool
 		expectations       func(*http.Request, *mocks.RouteMatcher, *mocks.Authenticator, *mocks.Authorizer)
 		wantUpstreamCalled bool
@@ -25,6 +27,7 @@ func TestServer_Handle(t *testing.T) {
 	}{
 		{
 			name:         "route matching failed",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -39,7 +42,27 @@ func TestServer_Handle(t *testing.T) {
 			wantStatusCode:     http.StatusInternalServerError,
 		},
 		{
+			name:        "invalid path in original request headers",
+			requestPath: "**-.::invalid path::.-**",
+			config: models.ServerConfig{
+				OriginalRequestHeaders: &models.OriginalRequestHeaders{
+					Method: "X-Original-Method",
+					Path:   "X-Original-URI",
+				},
+			},
+			proxyEnabled: false,
+			expectations: func(
+				request *http.Request,
+				routeMatcher *mocks.RouteMatcher,
+				authenticator *mocks.Authenticator,
+				authorizer *mocks.Authorizer) {
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusBadRequest,
+		},
+		{
 			name:         "allow anonymous",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -63,7 +86,42 @@ func TestServer_Handle(t *testing.T) {
 			wantStatusCode:     http.StatusOK,
 		},
 		{
+			name:        "allow anonymous through original request headers",
+			requestPath: "/some/path",
+			config: models.ServerConfig{
+				OriginalRequestHeaders: &models.OriginalRequestHeaders{
+					Method: "X-Original-Method",
+					Path:   "X-Original-URI",
+				},
+			},
+			proxyEnabled: false,
+			expectations: func(
+				request *http.Request,
+				routeMatcher *mocks.RouteMatcher,
+				authenticator *mocks.Authenticator,
+				authorizer *mocks.Authorizer) {
+
+				matchedRoutes := []models.RoutePolicy{
+					{
+						Path:           "/",
+						AllowAnonymous: true,
+					},
+				}
+
+				routeMatcher.On("MatchRoutePolicies",
+					request.Header.Get("X-Original-URI"),
+					request.Header.Get("X-Original-Method")).Return(matchedRoutes, nil)
+
+				authorizer.On("IsAnonymousAllowed",
+					matchedRoutes,
+					request.Header.Get("X-Original-Method")).Return(true)
+			},
+			wantUpstreamCalled: false,
+			wantStatusCode:     http.StatusOK,
+		},
+		{
 			name:         "proxy enabled, allow anonymous",
+			requestPath:  "/some/path",
 			proxyEnabled: true,
 			expectations: func(
 				request *http.Request,
@@ -88,6 +146,7 @@ func TestServer_Handle(t *testing.T) {
 		},
 		{
 			name:         "authentication - success, authorization - success",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -122,6 +181,7 @@ func TestServer_Handle(t *testing.T) {
 		},
 		{
 			name:         "proxy enabled, authentication - success, authorization - success",
+			requestPath:  "/some/path",
 			proxyEnabled: true,
 			expectations: func(
 				request *http.Request,
@@ -156,6 +216,7 @@ func TestServer_Handle(t *testing.T) {
 		},
 		{
 			name:         "authentication - failed",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -179,6 +240,7 @@ func TestServer_Handle(t *testing.T) {
 		},
 		{
 			name:         "authentication - success, authorization - failed",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -218,6 +280,7 @@ func TestServer_Handle(t *testing.T) {
 		},
 		{
 			name:         "error while authorization",
+			requestPath:  "/some/path",
 			proxyEnabled: false,
 			expectations: func(
 				request *http.Request,
@@ -260,10 +323,24 @@ func TestServer_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			header := http.Header{}
 
-			request, err := http.NewRequest("GET", "/", nil)
-			if err != nil {
-				t.Errorf("could not be create request: %v", err)
-				return
+			var request *http.Request
+			var err error
+
+			if tt.config.OriginalRequestHeaders != nil {
+				request, err = http.NewRequest("GET", "/", nil)
+				if err != nil {
+					t.Errorf("could not be create request: %v", err)
+					return
+				}
+
+				request.Header.Set("X-Original-URI", tt.requestPath)
+				request.Header.Set("X-Original-Method", "POST")
+			} else {
+				request, err = http.NewRequest("POST", tt.requestPath, nil)
+				if err != nil {
+					t.Errorf("could not be create request: %v", err)
+					return
+				}
 			}
 
 			var upstream *mocks.Handler
@@ -282,11 +359,16 @@ func TestServer_Handle(t *testing.T) {
 				routeMatcher,
 				authorizer,
 				authenticator,
-				models.ServerConfig{})
+				tt.config)
 
 			tt.expectations(request, routeMatcher, authenticator, authorizer)
 
 			if tt.wantUpstreamCalled {
+				if upstream == nil {
+					t.Errorf("invalid test case: proxy must be enabled to be called")
+					return
+				}
+
 				upstream.On("ServeHTTP", responseWriter, request).Return()
 			} else {
 				responseWriter.On("WriteHeader", tt.wantStatusCode).Return()
@@ -302,7 +384,7 @@ func TestServer_Handle(t *testing.T) {
 				assert.Equal(t, "Bearer", header["Www-Authenticate"][0])
 			}
 
-			if tt.proxyEnabled {
+			if upstream != nil {
 				upstream.AssertExpectations(t)
 			}
 

@@ -32,6 +32,15 @@ func TestRouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "path error",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			path:    ".::this is not a valid path::.",
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "exact matched route",
 			routePolicies: []models.RoutePolicy{
 				{Path: "/test", Methods: []string{"GET"}},
@@ -44,11 +53,35 @@ func TestRouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "exact matched route with trailing separator",
+			name: "exact matched route with trailing separator in request path",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			path:   "/test/",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "exact matched route with trailing separator in route policy",
 			routePolicies: []models.RoutePolicy{
 				{Path: "/test/", Methods: []string{"GET"}},
 			},
 			path:   "/test",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "exact matched route with query parameters",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			path:   "/test?someBool=true&someString=test",
 			method: "GET",
 			want: []models.RoutePolicy{
 				{Path: "/test/", Methods: []string{"GET"}},
