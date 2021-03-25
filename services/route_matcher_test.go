@@ -44,11 +44,35 @@ func TestRouteMatcherImpl_MatchRoutePolicies(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "exact matched route with trailing separator",
+			name: "exact matched route with trailing separator in request path",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			path:   "/test/",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: "/test", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "exact matched route with trailing separator in route policy",
 			routePolicies: []models.RoutePolicy{
 				{Path: "/test/", Methods: []string{"GET"}},
 			},
 			path:   "/test",
+			method: "GET",
+			want: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "exact matched route with query parameters",
+			routePolicies: []models.RoutePolicy{
+				{Path: "/test/", Methods: []string{"GET"}},
+			},
+			path:   "/test?someBool=true&someString=test",
 			method: "GET",
 			want: []models.RoutePolicy{
 				{Path: "/test/", Methods: []string{"GET"}},

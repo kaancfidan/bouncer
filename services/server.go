@@ -3,6 +3,7 @@ package services
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 
 	"github.com/google/uuid"
@@ -50,7 +51,14 @@ func (s Server) Handle(writer http.ResponseWriter, request *http.Request) {
 		path = request.URL.Path
 		method = request.Method
 	} else {
-		path = request.Header.Get(s.config.OriginalRequestHeaders.Path)
+		parsed, err := url.Parse(request.Header.Get(s.config.OriginalRequestHeaders.Path))
+		if err != nil {
+			log.Printf("[%v] Request path read from header could not be parsed: %v", requestID, err)
+			writer.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		path = parsed.Path
 		method = request.Header.Get(s.config.OriginalRequestHeaders.Method)
 	}
 

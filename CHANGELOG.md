@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 There are currently no unreleased changes.
 
+## [v0.0.2] - 2021-03-25
+### Fixed
+- Query parameters in request causing route matching failures when request paths are received through headers.
+
 ## [v0.0.1] - 2020-06-12
 ### Added
 - Support for original request path and method specification through headers (see [nginx docs](https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-subrequest-authentication/)).
@@ -24,5 +28,6 @@ This is the first version that includes the following functionality:
 - Claims-based authorization
 - Pure authorization server and reverse proxy modes
 
-[Unreleased]: https://github.com/kaancfidan/bouncer/compare/v0.0.1...master
+[Unreleased]: https://github.com/kaancfidan/bouncer/compare/v0.0.2...master
+[v0.0.2]: https://github.com/kaancfidan/bouncer/compare/v0.0.1...v0.0.2
 [v0.0.1]: https://github.com/kaancfidan/bouncer/compare/v0.0.0...v0.0.1
