@@ -707,10 +707,7 @@ func TestIntegration(t *testing.T) {
 			authenticator, err := services.NewAuthenticator(
 				signingKey,
 				"HMAC",
-				models.AuthenticationConfig{
-					IgnoreExpiration: true,
-					IgnoreNotBefore:  true,
-				})
+				models.AuthenticationConfig{})
 
 			if err != nil {
 				t.Errorf("could not create authenticator: %v", err)

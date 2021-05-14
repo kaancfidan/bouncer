@@ -6,8 +6,6 @@ import "net/url"
 type AuthenticationConfig struct {
 	Issuer             string `yaml:"issuer"`
 	Audience           string `yaml:"audience"`
-	IgnoreExpiration   bool   `yaml:"ignoreExpiration"`
-	IgnoreNotBefore    bool   `yaml:"ignoreNotBefore"`
 	ClockSkewInSeconds int    `yaml:"clockSkewInSeconds"`
 }
 

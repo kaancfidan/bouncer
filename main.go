@@ -91,7 +91,7 @@ func parseFlags() *flags {
 
 	flag.StringVar(&f.signingMethod, "m",
 		lookupEnv("BOUNCER_SIGNING_METHOD", ""),
-		"signing method, accepted values = [HMAC, RSA, EC]")
+		"signing method, accepted values = [HMAC, RSA, ECDSA]")
 
 	flag.StringVar(&f.configPath, "p",
 		lookupEnv("BOUNCER_CONFIG_PATH", f.configPath),

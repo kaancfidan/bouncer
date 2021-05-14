@@ -1,15 +1,18 @@
 package services
 
 import (
-	"encoding/json"
-	"errors"
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-
 	"github.com/kaancfidan/bouncer/models"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwt"
 )
 
 // Authenticator interface
@@ -19,48 +22,8 @@ type Authenticator interface {
 
 // AuthenticatorImpl is a JWT based authentication implementation
 type AuthenticatorImpl struct {
-	signingKey    interface{}
-	signingMethod string
-	config        models.AuthenticationConfig
-}
-
-type claims struct {
-	jwt.MapClaims
-	ClockSkew int
-}
-
-func parseSigningKey(signingKey []byte, signingMethod string) (key interface{}, err error) {
-	if signingMethod == "" {
-		return nil, fmt.Errorf("signing method unspecified")
-	}
-
-	if len(signingKey) == 0 {
-		return nil, fmt.Errorf("signing key is empty")
-	}
-
-	switch signingMethod {
-	case "HMAC":
-		key = signingKey
-	case "RSA":
-		key, err = jwt.ParseRSAPublicKeyFromPEM(signingKey)
-		if err != nil {
-			err = fmt.Errorf("could not parse RSA public key: %w", err)
-		}
-	case "EC":
-		key, err = jwt.ParseECPublicKeyFromPEM(signingKey)
-		if err != nil {
-			err = fmt.Errorf("could not parse EC public key: %w", err)
-		}
-	default:
-		err = fmt.Errorf("given signing method %s is out of range, "+
-			"should be one of: [HMAC, RSA, EC]", signingMethod)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return key, nil
+	keySet jwk.Set
+	config models.AuthenticationConfig
 }
 
 // NewAuthenticator creates a new AuthenticatorImpl instance
@@ -69,117 +32,119 @@ func NewAuthenticator(
 	signingMethod string,
 	config models.AuthenticationConfig) (*AuthenticatorImpl, error) {
 
-	key, err := parseSigningKey(signingKey, signingMethod)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse signing key: %w", err)
+	keySet := jwk.NewSet()
+
+	var key jwk.Key
+	switch signingMethod {
+	case "HMAC":
+		symKey := jwk.NewSymmetricKey()
+		err := symKey.Set(jwk.AlgorithmKey, jwa.HS256)
+		if err != nil {
+			return nil, fmt.Errorf("could not set algorithm to key: %v", err)
+		}
+
+		err = symKey.FromRaw(signingKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid signing key: %v", err)
+		}
+		key = symKey
+	case "RSA":
+		block, _ := pem.Decode(signingKey)
+		if block == nil {
+			return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+		}
+
+		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+		}
+
+		rsaKey := jwk.NewRSAPublicKey()
+		rawKey, ok := pub.(*rsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("signing key is not an RSA public key")
+		}
+
+		err = rsaKey.FromRaw(rawKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid signing key: %v", err)
+		}
+		key = rsaKey
+	case "ECDSA":
+		block, _ := pem.Decode(signingKey)
+		if block == nil {
+			return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+		}
+
+		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+		}
+
+		ecdsaKey := jwk.NewECDSAPublicKey()
+		rawKey, ok := pub.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("signing key is not an ECDSA public key")
+		}
+
+		err = ecdsaKey.FromRaw(rawKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid signing key: %v", err)
+		}
+		key = ecdsaKey
+	default:
+		return nil, fmt.Errorf("invalid signing method %s", signingMethod)
 	}
 
-	return &AuthenticatorImpl{
-		signingKey:    key,
-		signingMethod: signingMethod,
-		config:        config,
-	}, nil
-}
+	keySet.Add(key)
 
-func (a AuthenticatorImpl) keyFactory(token *jwt.Token) (interface{}, error) {
-	return a.signingKey, nil
+	return &AuthenticatorImpl{
+		keySet: keySet,
+		config: config,
+	}, nil
 }
 
 // Authenticate implements Bearer token authentication
 func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface{}, error) {
-	// check Bearer token
 	splitToken := strings.Split(authHeader, " ")
 
 	if len(splitToken) != 2 {
-		return nil, fmt.Errorf("access token could not be extracted")
+		return nil, fmt.Errorf("invalid authentication header format")
 	}
 
 	scheme := strings.ToLower(splitToken[0])
-	tokenString := splitToken[1]
-
 	if scheme != "bearer" {
 		return nil, fmt.Errorf("authentication scheme expected to be \"bearer\", actual: %s", scheme)
 	}
 
-	// check claims for authorization
-	claims := claims{
-		MapClaims: jwt.MapClaims{},
-		ClockSkew: a.config.ClockSkewInSeconds,
-	}
-	_, err := jwt.ParseWithClaims(tokenString, &claims, a.keyFactory)
+	var options []jwt.ValidateOption
 
-	if err != nil {
-		return nil, fmt.Errorf("error occurred while parsing claims: %w", err)
-	}
-
-	if _, ok := claims.MapClaims["exp"]; !ok && !a.config.IgnoreExpiration {
-		return nil, fmt.Errorf("required expiration timestamp not found")
-	}
-
-	if _, ok := claims.MapClaims["nbf"]; !ok && !a.config.IgnoreNotBefore {
-		return nil, fmt.Errorf("required not before timestamp not found")
-	}
-
-	// verify audience
-	if a.config.Audience != "" {
-		checkAud := claims.VerifyAudience(a.config.Audience, true)
-		if !checkAud {
-			return nil, fmt.Errorf("invalid audience")
-		}
-	}
-
-	// verify issuer
 	if a.config.Issuer != "" {
-		checkIss := claims.VerifyIssuer(a.config.Issuer, true)
-		if !checkIss {
-			return nil, fmt.Errorf("invalid issuer")
-		}
+		options = append(options, jwt.WithIssuer(a.config.Issuer))
 	}
 
-	return claims.MapClaims, nil
-}
-
-func (c *claims) VerifyExpiresAt(cmp int64, req bool) bool {
-	return c.MapClaims.VerifyExpiresAt(cmp-int64(c.ClockSkew), req)
-}
-
-func (c *claims) VerifyIssuedAt(cmp int64, req bool) bool {
-	return c.MapClaims.VerifyIssuedAt(cmp+int64(c.ClockSkew), req)
-}
-
-func (c *claims) VerifyNotBefore(cmp int64, req bool) bool {
-	return c.MapClaims.VerifyNotBefore(cmp+int64(c.ClockSkew), req)
-}
-
-func (c *claims) Valid() error {
-	err := new(jwt.ValidationError)
-	now := time.Now().Unix()
-
-	if !c.VerifyExpiresAt(now, false) {
-		err.Inner = errors.New("token is expired")
-		err.Errors |= jwt.ValidationErrorExpired
+	if a.config.Audience != "" {
+		options = append(options, jwt.WithAudience(a.config.Audience))
 	}
 
-	if !c.VerifyIssuedAt(now, false) {
-		err.Inner = errors.New("token used before issued")
-		err.Errors |= jwt.ValidationErrorIssuedAt
+	if a.config.ClockSkewInSeconds != 0 {
+		options = append(options, jwt.WithAcceptableSkew(time.Duration(a.config.ClockSkewInSeconds)*time.Second))
 	}
 
-	if !c.VerifyNotBefore(now, false) {
-		err.Inner = errors.New("token is not valid yet")
-		err.Errors |= jwt.ValidationErrorNotValidYet
+	payload := splitToken[1]
+	token, err := jwt.Parse(
+		[]byte(payload),
+		jwt.WithKeySet(a.keySet),
+		jwt.UseDefaultKey(true),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
 
-	if err.Errors == 0 {
-		return nil
+	err = jwt.Validate(token, options...)
+	if err != nil {
+		return nil, fmt.Errorf("invalid token: %v", err)
 	}
 
-	return err
-}
-
-func (c *claims) UnmarshalJSON(b []byte) error {
-	var claims jwt.MapClaims
-	err := json.Unmarshal(b, &claims)
-	c.MapClaims = claims
-	return err
+	return token.PrivateClaims(), nil
 }
