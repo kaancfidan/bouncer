@@ -35,63 +35,24 @@ func NewAuthenticator(
 	keySet := jwk.NewSet()
 
 	var key jwk.Key
+	var err error
+
 	switch signingMethod {
 	case "HMAC":
-		symKey := jwk.NewSymmetricKey()
-		err := symKey.Set(jwk.AlgorithmKey, jwa.HS256)
+		key, err = parseHmacKey(signingKey)
 		if err != nil {
-			return nil, fmt.Errorf("could not set algorithm to key: %v", err)
+			return nil, fmt.Errorf("could not parse HMAC key: %v", err)
 		}
-
-		err = symKey.FromRaw(signingKey)
-		if err != nil {
-			return nil, fmt.Errorf("invalid signing key: %v", err)
-		}
-		key = symKey
 	case "RSA":
-		block, _ := pem.Decode(signingKey)
-		if block == nil {
-			return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-		}
-
-		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+		key, err = parseRSAKey(signingKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+			return nil, fmt.Errorf("could not parse RSA key: %v", err)
 		}
-
-		rsaKey := jwk.NewRSAPublicKey()
-		rawKey, ok := pub.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("signing key is not an RSA public key")
-		}
-
-		err = rsaKey.FromRaw(rawKey)
-		if err != nil {
-			return nil, fmt.Errorf("invalid signing key: %v", err)
-		}
-		key = rsaKey
 	case "ECDSA":
-		block, _ := pem.Decode(signingKey)
-		if block == nil {
-			return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-		}
-
-		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+		key, err = parseECDSAKey(signingKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+			return nil, fmt.Errorf("could not parse ECDSA key: %v", err)
 		}
-
-		ecdsaKey := jwk.NewECDSAPublicKey()
-		rawKey, ok := pub.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("signing key is not an ECDSA public key")
-		}
-
-		err = ecdsaKey.FromRaw(rawKey)
-		if err != nil {
-			return nil, fmt.Errorf("invalid signing key: %v", err)
-		}
-		key = ecdsaKey
 	default:
 		return nil, fmt.Errorf("invalid signing method %s", signingMethod)
 	}
@@ -102,6 +63,71 @@ func NewAuthenticator(
 		keySet: keySet,
 		config: config,
 	}, nil
+}
+
+func parseHmacKey(signingKey []byte) (jwk.SymmetricKey, error) {
+	key := jwk.NewSymmetricKey()
+	err := key.Set(jwk.AlgorithmKey, jwa.HS256)
+	if err != nil {
+		return nil, fmt.Errorf("could not set algorithm to key: %v", err)
+	}
+
+	err = key.FromRaw(signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid signing key: %v", err)
+	}
+
+	return key, nil
+}
+
+func parseRSAKey(signingKey []byte) (jwk.RSAPublicKey, error) {
+	block, _ := pem.Decode(signingKey)
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+	}
+
+	key := jwk.NewRSAPublicKey()
+	rawKey, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("signing key is not an RSA public key")
+	}
+
+	err = key.FromRaw(rawKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid signing key: %v", err)
+	}
+
+	return key, nil
+}
+
+func parseECDSAKey(signingKey []byte) (jwk.ECDSAPublicKey, error) {
+	block, _ := pem.Decode(signingKey)
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+	}
+
+	key := jwk.NewECDSAPublicKey()
+	rawKey, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("signing key is not an ECDSA public key")
+	}
+
+	err = key.FromRaw(rawKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid signing key: %v", err)
+	}
+
+	return key, nil
 }
 
 // Authenticate implements Bearer token authentication
