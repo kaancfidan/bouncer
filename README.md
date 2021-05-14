@@ -161,7 +161,7 @@ Every startup setting has an environment variable and a CLI flag counterpart.
 | Environment Variable | CLI Flag | Description |
 | -------------------- | -------- | ----------- |
 | BOUNCER_SIGNING_KEY | -k | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
-| BOUNCER_SIGNING_METHOD | -m | Signing method. Accepted values are **[HMAC, RSA, EC]**. |
+| BOUNCER_SIGNING_METHOD | -m | Signing method. Accepted values are **[HMAC, RSA, ECDSA]**. |
 | BOUNCER_CONFIG_PATH | -p | Config YAML path. **default = /etc/bouncer/config.yaml** |
 | BOUNCER_LISTEN_ADDRESS | -l | TCP listen address. **default = :3512** |
 | BOUNCER_UPSTREAM_URL | --url | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode. |

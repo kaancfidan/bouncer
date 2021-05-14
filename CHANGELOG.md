@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-There are currently no unreleased changes.
+### Changed
+- Backing JWT library switched to [github.com/lestrrat-go/jwx](https://github.com/lestrrat-go/jwx).
+- Upgraded to Go 1.16.
+- Elliptic curve signing method parameter renamed from `EC` to `ECDSA`.
+
+### Removed
+- `ignoreNotBefore` and `ignoreExpiration` settings. These claims are now always validated if they are included in the token.
 
 ## [v0.0.2] - 2021-03-25
 ### Fixed
