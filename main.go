@@ -24,15 +24,19 @@ type flags struct {
 func main() {
 	f := parseFlags()
 
-	configReader, err := os.Open(f.configPath)
+	cfgFile, err := os.Open(f.configPath)
 	if err != nil {
 		log.Fatalf("could not open config file: %v", err)
 	}
-	defer configReader.Close()
 
-	server, err := newServer(f, configReader)
+	server, err := newServer(f, cfgFile)
 	if err != nil {
 		log.Fatalf("could not create server: %v", err)
+	}
+
+	err = cfgFile.Close()
+	if err != nil {
+		log.Fatalf("could not close config reader")
 	}
 
 	http.HandleFunc("/", server.Handle)
