@@ -1,4 +1,4 @@
-FROM golang:1.13 AS builder
+FROM golang:1.16 AS builder
 ARG VERSION
 WORKDIR /go/src/github.com/kaancfidan/bouncer
 COPY . .
