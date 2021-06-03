@@ -124,14 +124,7 @@ routePolicies:
 ```
 
 ## Current status
-First version has been released! 🎉 It's not battle-tested yet, but it's a start. 
-
-#### Current functionality in a nutshell:
-- Static signing key configuration w/ HMAC, RSA and EC support
-- Single valid issuer and audience configuration
-- Token expiration, "not before" and "issued at" checks with clock skew tolerance
-- Authorization policy config with YAML
-- Reverse proxy mode without TLS termination 
+Bouncer has been used in production for a few months now in few undisclosed enterprise systems as an API gateway access control solution. It has been tested with [nginx], [envoy] and [traefik], and proven to support all of them. It seems stable, but needs different use-cases to be tested thoroughly.
 
 ## Usage
 ### Docker image
