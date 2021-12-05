@@ -50,7 +50,7 @@ jobs:
           key: ${{ runner.os }}-benchmark
 
       - name: Store benchmark result
-        uses: kaancfidan/github-action-benchmark@master
+        uses: benchmark-action/github-action-benchmark@v1.11.1
         with:
           tool: 'go'
           output-file-path: bench.out
