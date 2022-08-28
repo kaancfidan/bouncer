@@ -10,7 +10,7 @@ import (
 func TestAuthorizerImpl_Authorize(t *testing.T) {
 	type args struct {
 		policyNames []string
-		claims      map[string]interface{}
+		claims      map[string]any
 	}
 
 	tests := []struct {
@@ -25,7 +25,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: make([]string, 0),
-				claims:      map[string]interface{}{},
+				claims:      map[string]any{},
 			},
 			wantFailedClaim: "",
 			wantErr:         false,
@@ -35,7 +35,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: make([]string, 0),
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"claim": "value",
 				},
 			},
@@ -47,7 +47,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			claimPolicies: map[string][]models.ClaimRequirement{},
 			args: args{
 				policyNames: []string{"NonExistingPolicyName"},
-				claims:      map[string]interface{}{},
+				claims:      map[string]any{},
 			},
 			wantFailedClaim: "",
 			wantErr:         true,
@@ -63,7 +63,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"HasName"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"name": "John",
 				},
 			},
@@ -81,7 +81,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"HasName"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"last_name": "Doe",
 				},
 			},
@@ -100,7 +100,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"NamedJohn"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"name": "John",
 				},
 			},
@@ -119,7 +119,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"Founder"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"employee_number": 1,
 				},
 			},
@@ -138,7 +138,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"CanDoStuff"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"do_stuff": true,
 				},
 			},
@@ -157,7 +157,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"NamedJohn"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"name": "Jane",
 				},
 			},
@@ -180,7 +180,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"SpecificJohn"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"name":      "John",
 					"last_name": "Doe",
 				},
@@ -204,7 +204,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"SpecificJohn"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"name":      "Jane",
 					"last_name": "Doe",
 				},
@@ -224,8 +224,8 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"CanTest"},
-				claims: map[string]interface{}{
-					"permission": []interface{}{"Test"},
+				claims: map[string]any{
+					"permission": []any{"Test"},
 				},
 			},
 			wantFailedClaim: "",
@@ -243,8 +243,8 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"CanDelete"},
-				claims: map[string]interface{}{
-					"permission": []interface{}{"Test", "Add"},
+				claims: map[string]any{
+					"permission": []any{"Test", "Add"},
 				},
 			},
 			wantFailedClaim: "permission",
@@ -262,7 +262,7 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"CanAddOrDelete"},
-				claims: map[string]interface{}{
+				claims: map[string]any{
 					"permission": "Add",
 				},
 			},
@@ -281,8 +281,8 @@ func TestAuthorizerImpl_Authorize(t *testing.T) {
 			},
 			args: args{
 				policyNames: []string{"CanAddOrDelete"},
-				claims: map[string]interface{}{
-					"permission": []interface{}{"Test", "Add"},
+				claims: map[string]any{
+					"permission": []any{"Test", "Add"},
 				},
 			},
 			wantFailedClaim: "",

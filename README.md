@@ -23,7 +23,7 @@ As always though, flexibility of **OPA** comes at a cost:
 - Each deployment is a new implementation of probably very similar policies & logic (e.g. jwt expiration check). 
 - Although it can be integrated with **envoy**[*](https://www.openpolicyagent.org/docs/latest/envoy-authorization/) via configuration, **nginx**[*](https://github.com/summerwind/opa-nginx-rbac) and **traefik**[*](https://github.com/containous/traefik/issues/4894) currently require development to integrate.
 
-As an example, [this blog post](https://engineering.etermax.com/api-authorization-with-kubernetes-traefik-and-open-policy-agent-23647fc384a1) demonstrates an authorization service implemented using **OPA** as a dependency and integrating it to **traefik**. 
+As an example, [this blog post](https://medium.com/etermax-technology/api-authorization-with-kubernetes-traefik-and-open-policy-agent-23647fc384a1) demonstrates an authorization service implemented using **OPA** as a dependency and integrating it to **traefik**. 
 
 **Bouncer** is the easier-to-use alternative to **OPA** in this scenario for the following reasons:
 - It is configured with a simple [YAML].
@@ -142,7 +142,7 @@ Run bouncer:
 --name bouncer \
 -d \
 --restart always \
--e BOUNCER_SIGNING_METHOD=HMAC \
+-e BOUNCER_SIGNING_METHOD=HS512 \
 -e BOUNCER_SIGNING_KEY=ThisIsSupposedToBeALongStringOfBytesLikeSixtyFourCharactersLong. \
 -v `pwd`/bouncer:/etc/bouncer \
 kaancfidan/bouncer:latest
@@ -151,13 +151,19 @@ kaancfidan/bouncer:latest
 ### Environment variables and command line flags
 Every startup setting has an environment variable and a CLI flag counterpart. 
 
-| Environment Variable | CLI Flag | Description |
-| -------------------- | -------- | ----------- |
-| BOUNCER_SIGNING_KEY | -k | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
-| BOUNCER_SIGNING_METHOD | -m | Signing method. Accepted values are **[HMAC, RSA, ECDSA]**. |
-| BOUNCER_CONFIG_PATH | -p | Config YAML path. **default = /etc/bouncer/config.yaml** |
-| BOUNCER_LISTEN_ADDRESS | -l | TCP listen address. **default = :3512** |
-| BOUNCER_UPSTREAM_URL | --url | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode. |
+| Environment Variable   | CLI Flag | Description                                                                                                                                           |
+|------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BOUNCER_SIGNING_KEY    | -k       | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
+| BOUNCER_SIGNING_ALG    | -a       | Signing algorithm. See accepted algorithms below.                                                                                                     |
+| BOUNCER_CONFIG_PATH    | -p       | Config YAML path. **default = /etc/bouncer/config.yaml**                                                                                              |
+| BOUNCER_LISTEN_ADDRESS | -l       | TCP listen address. **default = :3512**                                                                                                               |
+| BOUNCER_UPSTREAM_URL   | --url    | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode.                                                     |
+
+#### Accepted signature algorithms
+- ES256, ES256K, ES384, ES512, EdDSA
+- HS256, HS384, HS512
+- PS256, PS384, PS512
+- RS256, RS384, RS512
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkaancfidan%2Fbouncer?ref=badge_large)

@@ -7,9 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-yaml/yaml"
-
 	"github.com/kaancfidan/bouncer/models"
+	"gopkg.in/yaml.v3"
 )
 
 // ConfigParser is the config parsing interface
