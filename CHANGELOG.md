@@ -13,9 +13,6 @@ There are currently no unreleased changes.
 - Upgraded dependencies (including security updates for [jwx library](https://github.com/lestrrat-go/jwx))  .
 - `BOUNCER_SIGNING_METHOD` variable renamed to `BOUNCER_SIGNING_ALG` and now reflects the values listed [here](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2@v2.0.6/jwa#SignatureAlgorithm).
 
-### Added
-- `BOUNCER_REQUEST_TIMEOUT_IN_SEC` variable for setting request timeouts.
-
 ## [v0.1.0] - 2021-06-03
 ### Changed
 - Backing JWT library switched to [github.com/lestrrat-go/jwx](https://github.com/lestrrat-go/jwx).
