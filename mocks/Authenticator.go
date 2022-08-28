@@ -10,15 +10,15 @@ type Authenticator struct {
 }
 
 // Authenticate provides a mock function with given fields: authHeader
-func (_m *Authenticator) Authenticate(authHeader string) (map[string]interface{}, error) {
+func (_m *Authenticator) Authenticate(authHeader string) (map[string]any, error) {
 	ret := _m.Called(authHeader)
 
-	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func(string) map[string]interface{}); ok {
+	var r0 map[string]any
+	if rf, ok := ret.Get(0).(func(string) map[string]any); ok {
 		r0 = rf(authHeader)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(map[string]any)
 		}
 	}
 

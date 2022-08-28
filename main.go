@@ -16,7 +16,7 @@ const version = "0.0.0-VERSION" // to be replaced in CI
 
 type flags struct {
 	signingKey    string
-	signingMethod string
+	signingAlg    string
 	configPath    string
 	listenAddress string
 }
@@ -67,7 +67,7 @@ func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 
 	authenticator, err := services.NewAuthenticator(
 		[]byte(f.signingKey),
-		f.signingMethod,
+		f.signingAlg,
 		cfg.Authentication)
 
 	if err != nil {
@@ -93,9 +93,11 @@ func parseFlags() *flags {
 		lookupEnv("BOUNCER_SIGNING_KEY", ""),
 		"cryptographic signing key")
 
-	flag.StringVar(&f.signingMethod, "m",
-		lookupEnv("BOUNCER_SIGNING_METHOD", ""),
-		"signing method, accepted values = [HMAC, RSA, ECDSA]")
+	flag.StringVar(&f.signingAlg, "a",
+		lookupEnv("BOUNCER_SIGNING_ALG", ""),
+		"signing algorithm, accepted values = "+
+			"[\"ES256\",\"ES256K,\"ES384\",\"ES512\",\"EdDSA\",\"HS256\","+
+			"\"HS384\",\"HS512\",\"PS256\",\"PS384\",\"PS512\",\"RS256\",\"RS384\",\"RS512\"]")
 
 	flag.StringVar(&f.configPath, "p",
 		lookupEnv("BOUNCER_CONFIG_PATH", f.configPath),

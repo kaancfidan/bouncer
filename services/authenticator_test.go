@@ -10,46 +10,46 @@ import (
 
 func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 	tests := []struct {
-		name          string
-		signingKey    []byte
-		signingMethod string
-		cfg           models.AuthenticationConfig
-		authHeader    string
-		want          map[string]interface{}
-		wantErr       bool
+		name       string
+		signingKey []byte
+		signingAlg string
+		cfg        models.AuthenticationConfig
+		authHeader string
+		want       map[string]any
+		wantErr    bool
 	}{
 		{
-			name:          "invalid auth header",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
-			authHeader:    "this is not a valid bearer token",
-			want:          nil,
-			wantErr:       true,
+			name:       "invalid auth header",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
+			authHeader: "this is not a valid bearer token",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
-			name:          "invalid auth scheme",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
-			authHeader:    "Basic blabla",
-			want:          nil,
-			wantErr:       true,
+			name:       "invalid auth scheme",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
+			authHeader: "Basic blabla",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
-			name:          "invalid jwt",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
-			authHeader:    "Bearer invalid",
-			want:          nil,
-			wantErr:       true,
+			name:       "invalid jwt",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
+			authHeader: "Bearer invalid",
+			want:       nil,
+			wantErr:    true,
 		},
 		{
-			name:          "key validation fail",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "key validation fail",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"8qvU6CrwlVBvXmhbnr2lyKGAFKaTMshDxQE7W-1LM54",
@@ -57,36 +57,36 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "key validation success",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "key validation success",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "bearer scheme case insensitive",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "bearer scheme case insensitive",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "unsupported algorithm",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "unsupported algorithm",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ.B2qcvz8Ks8eQoEI9WzYSyCnC2q3VCY" +
 				"5TMvrI62uMCOfHEBuW68HBxFEFfqSNawURnGPGNJmBZW4h1iREU85eWC" +
@@ -96,9 +96,9 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "issuer missing",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
+			name:       "issuer missing",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
 			cfg: models.AuthenticationConfig{
 				Issuer: "http://url/to/some/issuer",
 			},
@@ -109,37 +109,37 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "issuer claim available but no valid issuer configured",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "issuer claim available but no valid issuer configured",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpc3MiOiJodHRwOi8vdXJsL3RvL3NvbWUvaXNzdWVyIn0." +
 				"-SdBeoR7nVevkZIhKh-QlAl64k5ZzKQoV71f3Q-Djcs",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "valid issuer",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
+			name:       "valid issuer",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
 			cfg: models.AuthenticationConfig{
 				Issuer: "http://url/to/some/issuer",
 			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpc3MiOiJodHRwOi8vdXJsL3RvL3NvbWUvaXNzdWVyIn0." +
 				"-SdBeoR7nVevkZIhKh-QlAl64k5ZzKQoV71f3Q-Djcs",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "audience missing",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
+			name:       "audience missing",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
 			cfg: models.AuthenticationConfig{
 				Audience: "http://url/to/some/audience",
 			},
@@ -150,38 +150,38 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "audience claim available but no valid audience configured",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "audience claim available but no valid audience configured",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJhdWQiOiJodHRwOi8vdXJsL3RvL3NvbWUvYXVkaWVuY2UifQ." +
 				"QslmtoVNaP9OSeKRvkxeR_UBMTdXL6098xLtbJpx114",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "valid audience",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
+			name:       "valid audience",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
 			cfg: models.AuthenticationConfig{
 				Audience: "http://url/to/some/audience",
 			},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJhdWQiOiJodHRwOi8vdXJsL3RvL3NvbWUvYXVkaWVuY2UifQ." +
 				"QslmtoVNaP9OSeKRvkxeR_UBMTdXL6098xLtbJpx114",
-			want: map[string]interface{}{
+			want: map[string]any{
 				"test": "valid",
 			},
 			wantErr: false,
 		},
 		{
-			name:          "expired token",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "expired token",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpYXQiOjE1OTA4NTAzMjUsImV4cCI6MTU5MDg1MDMyNn0." +
 				"IXoMkKWQRWZUp1TklXmZw3PbQl2_XxL8MxomJLb00Ec",
@@ -189,10 +189,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "token used before iat",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "token used before iat",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJpYXQiOjMyNTAzNjgwMDAwfQ." +
 				"Q_yvYtLhSEfEpA6hdTBZOwDKDWuYFVAdRA8juVbnltM",
@@ -200,10 +200,10 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:          "token used before nbf",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			cfg:           models.AuthenticationConfig{},
+			name:       "token used before nbf",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQiLCJuYmYiOjMyNTAzNjgwMDAwfQ." +
 				"5E-zZ8aJR7C2tIKdnDXUvVX9Z-T7ZUwlxZl668FJjWY",
@@ -221,8 +221,8 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 				"B2qNUYi+Z+hAXs20noxYC3y4dQY0c7NmFirIKTMPRnfOGMCumKbhQ6Dlp5zrCC50\n" +
 				"MwIDAQAB\n" +
 				"-----END PUBLIC KEY-----"),
-			signingMethod: "RSA",
-			cfg:           models.AuthenticationConfig{},
+			signingAlg: "RS512",
+			cfg:        models.AuthenticationConfig{},
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
 				"eyJ0ZXN0IjoidmFsaWQifQ." +
 				"BTAK2WX8VVVJC_mr2f0N89cx7d34HgXobLS6pKwJpdQ",
@@ -234,7 +234,7 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			a, err := services.NewAuthenticator(
 				tt.signingKey,
-				tt.signingMethod,
+				tt.signingAlg,
 				tt.cfg)
 
 			if err != nil {
@@ -256,35 +256,35 @@ func TestAuthenticatorImpl_Authenticate(t *testing.T) {
 
 func TestNewAuthenticator(t *testing.T) {
 	tests := []struct {
-		name          string
-		signingKey    []byte
-		signingMethod string
-		cfg           models.AuthenticationConfig
-		wantErr       bool
+		name       string
+		signingKey []byte
+		signingAlg string
+		cfg        models.AuthenticationConfig
+		wantErr    bool
 	}{
 		{
-			name:          "hmac happy path",
-			signingKey:    []byte("TestKey"),
-			signingMethod: "HMAC",
-			wantErr:       false,
+			name:       "hmac happy path",
+			signingKey: []byte("TestKey"),
+			signingAlg: "HS256",
+			wantErr:    false,
 		},
 		{
-			name:          "nil key",
-			signingKey:    nil,
-			signingMethod: "HMAC",
-			wantErr:       true,
+			name:       "nil key",
+			signingKey: nil,
+			signingAlg: "HS256",
+			wantErr:    true,
 		},
 		{
-			name:          "unspecified signing method",
-			signingKey:    nil,
-			signingMethod: "",
-			wantErr:       true,
+			name:       "unspecified signing method",
+			signingKey: nil,
+			signingAlg: "",
+			wantErr:    true,
 		},
 		{
-			name:          "invalid signing method",
-			signingKey:    []byte("some key"),
-			signingMethod: "clearly not a signing method",
-			wantErr:       true,
+			name:       "invalid signing method",
+			signingKey: []byte("some key"),
+			signingAlg: "clearly not a signing method",
+			wantErr:    true,
 		},
 		{
 			name: "rsa happy path",
@@ -297,8 +297,8 @@ func TestNewAuthenticator(t *testing.T) {
 				"B2qNUYi+Z+hAXs20noxYC3y4dQY0c7NmFirIKTMPRnfOGMCumKbhQ6Dlp5zrCC50\n" +
 				"MwIDAQAB\n" +
 				"-----END PUBLIC KEY-----"),
-			signingMethod: "RSA",
-			wantErr:       false,
+			signingAlg: "RS512",
+			wantErr:    false,
 		},
 		{
 			name: "ecdsa happy path",
@@ -306,38 +306,15 @@ func TestNewAuthenticator(t *testing.T) {
 				"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESQPkk+EQIbNiOsa5W1dQsBgr98Jl\n" +
 				"f3WzR1k8rcW0jCc3Bf0V/wqMdTcTL8yyyRjnMS6bABW1zHPnvjk/pV2+UQ==\n" +
 				"-----END PUBLIC KEY-----"),
-			signingMethod: "ECDSA",
-			wantErr:       false,
-		},
-		{
-			name: "rsa invalid key",
-			signingKey: []byte("-----BEGIN PUBLIC KEY-----\n" +
-				"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESQPkk+EQIbNiOsa5W1dQsBgr98Jl\n" +
-				"f3WzR1k8rcW0jCc3Bf0V/wqMdTcTL8yyyRjnMS6bABW1zHPnvjk/pV2+UQ==\n" +
-				"-----END PUBLIC KEY-----"),
-			signingMethod: "RSA",
-			wantErr:       true,
-		},
-		{
-			name: "ecdsa invalid key",
-			signingKey: []byte("-----BEGIN PUBLIC KEY-----\n" +
-				"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3JaY7+LV0MHtD2+LsLus\n" +
-				"/N6965JYFSc138UpaAeG9HK13LEhR8xqFMSgX0S7nrumDDERP3+/VXW+AOat8DZ/\n" +
-				"HocrTuh1rQgQJgGFho/U0T9riTgm3eakFZi1Q2VjAYWIZizJ+wb+pttbGY1teLsW\n" +
-				"1BDheuRmPiII/78bOb2ERD3KyWUEbyL+zjVdemq6RbTg4v/0L27yPS+WLceaUlbL\n" +
-				"dBoJNjIKWF0odwQwqyp7KRN2KGR/SD9uWPL77KhWqNyhSHz7Ad9dYggnXbZg3d8O\n" +
-				"B2qNUYi+Z+hAXs20noxYC3y4dQY0c7NmFirIKTMPRnfOGMCumKbhQ6Dlp5zrCC50\n" +
-				"MwIDAQAB\n" +
-				"-----END PUBLIC KEY-----"),
-			signingMethod: "ECDSA",
-			wantErr:       true,
+			signingAlg: "ES512",
+			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := services.NewAuthenticator(
 				tt.signingKey,
-				tt.signingMethod,
+				tt.signingAlg,
 				tt.cfg)
 
 			if (err != nil) != tt.wantErr {

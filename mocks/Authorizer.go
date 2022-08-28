@@ -11,18 +11,18 @@ type Authorizer struct {
 }
 
 // Authorize provides a mock function with given fields: policyNames, claims
-func (_m *Authorizer) Authorize(policyNames []string, claims map[string]interface{}) (string, error) {
+func (_m *Authorizer) Authorize(policyNames []string, claims map[string]any) (string, error) {
 	ret := _m.Called(policyNames, claims)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func([]string, map[string]interface{}) string); ok {
+	if rf, ok := ret.Get(0).(func([]string, map[string]any) string); ok {
 		r0 = rf(policyNames, claims)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func([]string, map[string]interface{}) error); ok {
+	if rf, ok := ret.Get(1).(func([]string, map[string]any) error); ok {
 		r1 = rf(policyNames, claims)
 	} else {
 		r1 = ret.Error(1)

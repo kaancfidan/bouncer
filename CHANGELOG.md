@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 There are currently no unreleased changes.
 
+## [v1.0.0] - 2022-08-29
+### Changed
+- Upgraded to Go 1.18.
+- Upgraded dependencies (including security updates for [jwx library](https://github.com/lestrrat-go/jwx))  .
+- `BOUNCER_SIGNING_METHOD` variable renamed to `BOUNCER_SIGNING_ALG` and now reflects the values listed [here](https://pkg.go.dev/github.com/lestrrat-go/jwx/v2@v2.0.6/jwa#SignatureAlgorithm).
+
 ## [v0.1.0] - 2021-06-03
 ### Changed
 - Backing JWT library switched to [github.com/lestrrat-go/jwx](https://github.com/lestrrat-go/jwx).
@@ -37,7 +43,8 @@ This is the first version that includes the following functionality:
 - Claims-based authorization
 - Pure authorization server and reverse proxy modes
 
-[Unreleased]: https://github.com/kaancfidan/bouncer/compare/v0.1.0...master
+[Unreleased]: https://github.com/kaancfidan/bouncer/compare/v1.0.0...master
+[v1.0.0]: https://github.com/kaancfidan/bouncer/compare/v0.1.0...v1.0.0
 [v0.1.0]: https://github.com/kaancfidan/bouncer/compare/v0.0.2...v0.1.0
 [v0.0.2]: https://github.com/kaancfidan/bouncer/compare/v0.0.1...v0.0.2
 [v0.0.1]: https://github.com/kaancfidan/bouncer/compare/v0.0.0...v0.0.1

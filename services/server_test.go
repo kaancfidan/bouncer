@@ -157,7 +157,7 @@ func TestServer_Handle(t *testing.T) {
 				// no route policy matched
 				matchedRoutes := make([]models.RoutePolicy, 0)
 
-				claims := map[string]interface{}{
+				claims := map[string]any{
 					"claim": "value",
 				}
 
@@ -192,7 +192,7 @@ func TestServer_Handle(t *testing.T) {
 				// no route policy matched
 				matchedRoutes := make([]models.RoutePolicy, 0)
 
-				claims := map[string]interface{}{
+				claims := map[string]any{
 					"claim": "value",
 				}
 
@@ -256,7 +256,7 @@ func TestServer_Handle(t *testing.T) {
 					},
 				}
 
-				claims := map[string]interface{}{
+				claims := map[string]any{
 					"claim": "value",
 				}
 
@@ -296,7 +296,7 @@ func TestServer_Handle(t *testing.T) {
 					},
 				}
 
-				claims := map[string]interface{}{
+				claims := map[string]any{
 					"claim": "value",
 				}
 
@@ -706,7 +706,7 @@ func TestIntegration(t *testing.T) {
 			authorizer := services.NewAuthorizer(cfg.ClaimPolicies)
 			authenticator, err := services.NewAuthenticator(
 				signingKey,
-				"HMAC",
+				"HS256",
 				models.AuthenticationConfig{})
 
 			if err != nil {

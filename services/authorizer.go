@@ -9,7 +9,7 @@ import (
 
 // Authorizer is the claims-based authorization interface
 type Authorizer interface {
-	Authorize(policyNames []string, claims map[string]interface{}) (failedPolicy string, err error)
+	Authorize(policyNames []string, claims map[string]any) (failedPolicy string, err error)
 	IsAnonymousAllowed(matchedPolicies []models.RoutePolicy, method string) bool
 }
 
@@ -24,7 +24,7 @@ func NewAuthorizer(claimPolicies map[string][]models.ClaimRequirement) *Authoriz
 }
 
 // Authorize checks claim values and returns the first failed claim
-func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interface{}) (failedClaim string, err error) {
+func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]any) (failedClaim string, err error) {
 	claimPolicies, err := a.getClaimPolicies(policyNames)
 	if err != nil {
 		return "", err
@@ -45,7 +45,7 @@ func (a AuthorizerImpl) Authorize(policyNames []string, claims map[string]interf
 
 		// if the matching claim in the token is an array
 		// check if the array contains the expected value
-		if arr, ok := claim.([]interface{}); ok {
+		if arr, ok := claim.([]any); ok {
 			found := false
 			for _, val := range arr {
 				for _, cfgVal := range cp.Values {
@@ -148,6 +148,6 @@ func (a AuthorizerImpl) getClaimPolicies(policyNames []string) ([]models.ClaimRe
 	return claimPolicies, nil
 }
 
-func claimEquals(claim interface{}, expectation string) bool {
+func claimEquals(claim any, expectation string) bool {
 	return fmt.Sprintf("%v", claim) == expectation
 }

@@ -1,137 +1,53 @@
 package services
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/kaancfidan/bouncer/models"
-	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
 // Authenticator interface
 type Authenticator interface {
-	Authenticate(authHeader string) (claims map[string]interface{}, err error)
+	Authenticate(authHeader string) (claims map[string]any, err error)
 }
 
 // AuthenticatorImpl is a JWT based authentication implementation
 type AuthenticatorImpl struct {
-	keySet jwk.Set
+	key    jwk.Key
 	config models.AuthenticationConfig
+	alg    jwa.KeyAlgorithm
 }
 
 // NewAuthenticator creates a new AuthenticatorImpl instance
 func NewAuthenticator(
 	signingKey []byte,
-	signingMethod string,
+	signingAlgorithm string,
 	config models.AuthenticationConfig) (*AuthenticatorImpl, error) {
 
-	keySet := jwk.NewSet()
-
-	var key jwk.Key
-	var err error
-
-	switch signingMethod {
-	case "HMAC":
-		key, err = parseHmacKey(signingKey)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse HMAC key: %v", err)
-		}
-	case "RSA":
-		key, err = parseRSAKey(signingKey)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse RSA key: %v", err)
-		}
-	case "ECDSA":
-		key, err = parseECDSAKey(signingKey)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse ECDSA key: %v", err)
-		}
-	default:
-		return nil, fmt.Errorf("invalid signing method %s", signingMethod)
+	key, err := jwk.FromRaw(signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse key: %v", err)
 	}
 
-	keySet.Add(key)
+	alg := jwa.KeyAlgorithmFrom(signingAlgorithm)
+	if _, isInvalid := alg.(jwa.InvalidKeyAlgorithm); isInvalid {
+		return nil, fmt.Errorf("unknown signing algorithm: %s", signingAlgorithm)
+	}
 
 	return &AuthenticatorImpl{
-		keySet: keySet,
+		key:    key,
 		config: config,
+		alg:    alg,
 	}, nil
 }
 
-func parseHmacKey(signingKey []byte) (jwk.SymmetricKey, error) {
-	key := jwk.NewSymmetricKey()
-	err := key.Set(jwk.AlgorithmKey, jwa.HS256)
-	if err != nil {
-		return nil, fmt.Errorf("could not set algorithm to key: %v", err)
-	}
-
-	err = key.FromRaw(signingKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid signing key: %v", err)
-	}
-
-	return key, nil
-}
-
-func parseRSAKey(signingKey []byte) (jwk.RSAPublicKey, error) {
-	block, _ := pem.Decode(signingKey)
-	if block == nil {
-		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
-	}
-
-	key := jwk.NewRSAPublicKey()
-	rawKey, ok := pub.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("signing key is not an RSA public key")
-	}
-
-	err = key.FromRaw(rawKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid signing key: %v", err)
-	}
-
-	return key, nil
-}
-
-func parseECDSAKey(signingKey []byte) (jwk.ECDSAPublicKey, error) {
-	block, _ := pem.Decode(signingKey)
-	if block == nil {
-		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
-	}
-
-	key := jwk.NewECDSAPublicKey()
-	rawKey, ok := pub.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("signing key is not an ECDSA public key")
-	}
-
-	err = key.FromRaw(rawKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid signing key: %v", err)
-	}
-
-	return key, nil
-}
-
 // Authenticate implements Bearer token authentication
-func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface{}, error) {
+func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]any, error) {
 	splitToken := strings.Split(authHeader, " ")
 
 	if len(splitToken) != 2 {
@@ -158,11 +74,11 @@ func (a AuthenticatorImpl) Authenticate(authHeader string) (map[string]interface
 	}
 
 	payload := splitToken[1]
+
 	token, err := jwt.Parse(
 		[]byte(payload),
-		jwt.WithKeySet(a.keySet),
-		jwt.UseDefaultKey(true),
-	)
+		jwt.WithKey(a.alg, a.key))
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}

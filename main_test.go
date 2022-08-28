@@ -15,8 +15,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "happy path",
 			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
+				signingKey: "SuperSecretKey123!",
+				signingAlg: "HS256",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    false,
@@ -24,8 +24,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "no config",
 			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
+				signingKey: "SuperSecretKey123!",
+				signingAlg: "HS256",
 			},
 			cfgContent: "",
 			wantErr:    true,
@@ -33,8 +33,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "invalid config yaml",
 			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
+				signingKey: "SuperSecretKey123!",
+				signingAlg: "HS256",
 			},
 			cfgContent: ": invalid",
 			wantErr:    true,
@@ -42,8 +42,8 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "invalid config content",
 			flags: &flags{
-				signingKey:    "SuperSecretKey123!",
-				signingMethod: "HMAC",
+				signingKey: "SuperSecretKey123!",
+				signingAlg: "HS256",
 			},
 			cfgContent: "claimPolicies:\n PolicyWithoutClaim:\n  - value: test\nroutePolicies: []",
 			wantErr:    true,
@@ -51,7 +51,7 @@ func TestNewServer(t *testing.T) {
 		{
 			name: "no signing key",
 			flags: &flags{
-				signingMethod: "HMAC",
+				signingAlg: "HS256",
 			},
 			cfgContent: "claimPolicies: {}\nroutePolicies: []",
 			wantErr:    true,
