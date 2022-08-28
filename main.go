@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/kaancfidan/bouncer/services"
 )
@@ -15,10 +17,11 @@ import (
 const version = "0.0.0-VERSION" // to be replaced in CI
 
 type flags struct {
-	signingKey    string
-	signingAlg    string
-	configPath    string
-	listenAddress string
+	signingKey       string
+	signingAlg       string
+	configPath       string
+	listenAddress    string
+	httpTimeoutInSec string
 }
 
 func main() {
@@ -39,12 +42,21 @@ func main() {
 		log.Fatalf("could not close config reader")
 	}
 
-	http.HandleFunc("/", server.Handle)
+	timeoutInSec, err := strconv.Atoi(f.httpTimeoutInSec)
+	if err != nil {
+		log.Fatalf("could not convert request timeout in seconds to integer, value given: %s", f.httpTimeoutInSec)
+	}
 
 	log.Printf("Bouncer[%s] started.", version)
 	defer log.Printf("Bouncer shut down.")
 
-	err = http.ListenAndServe(f.listenAddress, nil)
+	err = http.ListenAndServe(
+		f.listenAddress,
+		http.TimeoutHandler(
+			http.HandlerFunc(server.Handle),
+			time.Duration(timeoutInSec)*time.Second,
+			"request timed out"))
+
 	log.Fatal(err)
 }
 
@@ -84,8 +96,9 @@ func newServer(f *flags, configReader io.Reader) (*services.Server, error) {
 
 func parseFlags() *flags {
 	f := flags{
-		configPath:    "/etc/bouncer/config.yaml",
-		listenAddress: ":3512",
+		configPath:       "/etc/bouncer/config.yaml",
+		listenAddress:    ":3512",
+		httpTimeoutInSec: "10",
 	}
 
 	printVersion := flag.Bool("v", false, "print version and exit")
@@ -106,6 +119,10 @@ func parseFlags() *flags {
 	flag.StringVar(&f.listenAddress, "l",
 		lookupEnv("BOUNCER_LISTEN_ADDRESS", f.listenAddress),
 		fmt.Sprintf("listen address, default = %s", f.listenAddress))
+
+	flag.StringVar(&f.httpTimeoutInSec, "t",
+		lookupEnv("BOUNCER_REQUEST_TIMEOUT_IN_SEC", f.httpTimeoutInSec),
+		fmt.Sprintf("request timeout in seconds, default = %ss", f.httpTimeoutInSec))
 
 	flag.Parse()
 

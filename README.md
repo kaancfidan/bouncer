@@ -151,13 +151,14 @@ kaancfidan/bouncer:latest
 ### Environment variables and command line flags
 Every startup setting has an environment variable and a CLI flag counterpart. 
 
-| Environment Variable   | CLI Flag | Description                                                                                                                                           |
-|------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BOUNCER_SIGNING_KEY    | -k       | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
-| BOUNCER_SIGNING_ALG    | -a       | Signing algorithm. See accepted algorithms below.                                                                                                     |
-| BOUNCER_CONFIG_PATH    | -p       | Config YAML path. **default = /etc/bouncer/config.yaml**                                                                                              |
-| BOUNCER_LISTEN_ADDRESS | -l       | TCP listen address. **default = :3512**                                                                                                               |
-| BOUNCER_UPSTREAM_URL   | --url    | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode.                                                     |
+| Environment Variable           | CLI Flag | Description                                                                                                                                            |
+|--------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BOUNCER_SIGNING_KEY            | -k       | Signing key to be used to validate tokens. Consider setting this variable through a file for multiline keys. e.g. `BOUNCER_SIGNING_KEY=$(cat rsa.pub)` |
+| BOUNCER_SIGNING_ALG            | -a       | Signing algorithm. See accepted algorithms below.                                                                                                      |
+| BOUNCER_CONFIG_PATH            | -p       | Config YAML path. **default = /etc/bouncer/config.yaml**                                                                                               |
+| BOUNCER_LISTEN_ADDRESS         | -l       | TCP listen address. **default = :3512**                                                                                                                |
+| BOUNCER_UPSTREAM_URL           | --url    | Upstream URL to be used in reverse proxy mode. If not set, Bouncer runs in pure auth server mode.                                                      |
+| BOUNCER_REQUEST_TIMEOUT_IN_SEC | -t       | Incoming HTTP request timeout in seconds. **default = 10s**                                                                                            |
 
 #### Accepted signature algorithms
 - ES256, ES256K, ES384, ES512, EdDSA
